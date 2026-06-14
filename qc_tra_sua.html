@@ -1,0 +1,2560 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ Thống Kiểm Soát Chất Lượng Vận Hành - Chuỗi Mongo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #ee7b3c;
+    --primary-light: #f6a259;
+    --primary-dark: #d9692a;
+    --primary-soft: #fdf1e3;
+    --bg: #fbf3e8;
+  }
+
+  body {
+    font-family: 'Lora', 'Segoe UI', system-ui, serif;
+    background: var(--bg);
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  /* ===== APP LAYOUT ===== */
+  .app-layout { display: flex; min-height: 100vh; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    width: 250px; background: white; border-right: 1px solid #f4e6d7; flex-shrink: 0;
+    display: flex; flex-direction: column; padding: 22px 0;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 1000;
+  }
+  .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 0 20px 20px; border-bottom: 1px solid #f4ece2; margin-bottom: 16px; }
+  .sidebar-logo {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  }
+  .sidebar-title { font-weight: 800; font-size: 0.98rem; line-height: 1.25; }
+  .sidebar-subtitle { font-size: 0.74rem; color: #aaa; margin-top: 2px; }
+  .sidebar-section { padding: 0 12px; }
+  .sidebar-group-label { font-size: 0.68rem; font-weight: 800; color: #ddb993; text-transform: uppercase; letter-spacing: 0.09em; padding: 10px 12px 6px; }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 11px 14px; border-radius: 10px; border: none; background: none; cursor: pointer;
+    font-size: 0.9rem; font-weight: 700; color: #777; transition: all 0.15s; margin-bottom: 3px;
+    font-family: inherit;
+  }
+  .sidebar-link:hover { background: var(--primary-soft); color: #1a1a2e; }
+  .sidebar-link.active { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; box-shadow: 0 4px 12px rgba(238,123,60,0.3); }
+  .sidebar-link-icon { font-size: 1.05rem; }
+  .sidebar-link .badge { margin-left: auto; }
+  .sidebar-link.active .badge { background: white; color: var(--primary); }
+
+  /* ===== SIDEBAR TOGGLE (mobile) ===== */
+  .sidebar-toggle { display: none; }
+  .sidebar-overlay { display: none; }
+
+  /* ===== PAGE HEADER ===== */
+  .main-content { flex: 1; min-width: 0; }
+  .page-header {
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    color: white; padding: 22px 32px;
+    box-shadow: 0 4px 12px rgba(238,123,60,0.25);
+  }
+  .page-header h1 { font-size: 1.3rem; font-weight: 700; }
+  .page-header p { font-size: 0.82rem; opacity: 0.85; margin-top: 4px; }
+
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #e53935; color: white; font-size: 0.65rem; font-weight: 800;
+    border-radius: 10px; padding: 1px 6px; margin-left: 6px; min-width: 18px;
+  }
+
+  /* ===== PANELS ===== */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ===== AUTH SCREENS ===== */
+  .app-layout { display: none; }
+  .app-layout.ready { display: flex; }
+  @media (max-width: 860px) {
+    .app-layout.ready { display: block; }
+  }
+  .auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 20px;
+  }
+  .auth-card {
+    background: white; border-radius: 18px; padding: 36px 32px; max-width: 380px; width: 100%;
+    text-align: center; box-shadow: 0 8px 30px rgba(238,123,60,0.15);
+  }
+  .auth-logo {
+    width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 18px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    display: flex; align-items: center; justify-content: center; font-size: 2rem;
+  }
+  .auth-card h1 { font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; }
+  .auth-card p { font-size: 0.85rem; color: #888; margin-bottom: 22px; line-height: 1.5; }
+  .auth-gbtn-wrap { display: flex; justify-content: center; }
+  .auth-user-pic {
+    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px; display: block;
+    border: 3px solid var(--primary-soft);
+  }
+  .auth-email { font-size: 0.85rem; color: #555; font-weight: 600; margin-bottom: 4px; }
+  .auth-status { font-size: 0.8rem; color: #e53935; background: #fdecea; border-radius: 10px; padding: 10px 14px; margin: 14px 0; }
+  .auth-spinner {
+    width: 32px; height: 32px; border: 3px solid var(--primary-soft); border-top-color: var(--primary);
+    border-radius: 50%; margin: 0 auto 16px; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .auth-logout-btn {
+    margin-top: 10px; background: none; border: 1.5px solid #f0d9c4; color: #999; border-radius: 10px;
+    padding: 8px 16px; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .auth-logout-btn:hover { background: var(--primary-soft); color: var(--primary-dark); }
+
+  /* ===== SIDEBAR USER FOOTER ===== */
+  .sidebar-user {
+    margin-top: auto; padding: 14px 16px; border-top: 1px solid #f4ece2;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-user img { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; }
+  .sidebar-user-info { flex: 1; min-width: 0; }
+  .sidebar-user-name { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-user-role { font-size: 0.7rem; color: #bbb; }
+  .sidebar-user-logout { background: none; border: none; cursor: pointer; font-size: 1rem; color: #ccc; flex-shrink: 0; }
+  .sidebar-user-logout:hover { color: var(--primary); }
+
+  /* ===== USER MANAGEMENT ===== */
+  .users-table-wrap { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 24px; }
+  .users-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .users-table th { background: var(--primary-soft); text-align: left; padding: 10px 14px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #b9783f; font-weight: 800; }
+  .users-table td { padding: 10px 14px; border-bottom: 1px solid #f4ece2; vertical-align: top; }
+  .users-table tr:last-child td { border-bottom: none; }
+  .role-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 800; }
+  .role-pill.role-admin { background: #fde0d4; color: #c2410c; }
+  .role-pill.role-qc { background: #e0f2e9; color: #2e7d32; }
+  .role-pill.role-area { background: #e3edfb; color: #1565c0; }
+  .role-pill.role-store { background: #f1eefb; color: #6a3fb5; }
+  .store-tags { display: flex; flex-wrap: wrap; gap: 4px; max-width: 280px; }
+  .store-tag { background: var(--primary-soft); color: var(--primary-dark); font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .user-actions button { background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 2px 6px; }
+  .user-actions button:hover { opacity: 0.6; }
+  .store-checklist { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .store-checklist label {
+    display: flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 600; color: #555;
+    background: var(--primary-soft); border-radius: 8px; padding: 6px 10px; cursor: pointer; text-transform: none;
+  }
+  .store-checklist input { width: auto !important; height: auto !important; }
+
+  @media (max-width: 860px) {
+    .sidebar-toggle {
+      display: flex; position: fixed; top: 14px; left: 14px; z-index: 1100;
+      width: 42px; height: 42px; border-radius: 10px; border: none;
+      background: var(--primary); color: white; font-size: 1.25rem;
+      align-items: center; justify-content: center; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%);
+      transition: transform 0.25s ease; box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay {
+      display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+    .page-header { padding-left: 64px; }
+  }
+
+  /* ===== STORE INFO ===== */
+  .store-info {
+    background: white; border-radius: 12px; padding: 20px 24px;
+    margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 600px) { .store-info { grid-template-columns: 1fr; } }
+  .store-info label { font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
+  .store-info input, .store-info select {
+    width: 100%; border: 1.5px solid #e0e4f0; border-radius: 8px;
+    padding: 8px 12px; font-size: 0.92rem; color: #1a1a2e; transition: border-color 0.2s;
+    background: white; box-sizing: border-box; height: 38px;
+  }
+  .store-info input:focus, .store-info select:focus { outline: none; border-color: var(--primary); }
+
+  /* Sheet config */
+  .sheet-config {
+    background: var(--primary-soft); border: 1.5px solid #f6dcc0; border-radius: 12px;
+    padding: 14px 20px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .sheet-config-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .sheet-config-body { flex: 1; min-width: 200px; }
+  .sheet-config-body label { font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+  .sheet-config-body input {
+    width: 100%; border: 1.5px solid #f6dcc0; border-radius: 8px;
+    padding: 7px 12px; font-size: 0.82rem; color: #333; background: white;
+  }
+  .sheet-config-body input:focus { outline: none; border-color: var(--primary); }
+  .sheet-status { font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; flex-shrink: 0; }
+  .sheet-status.connected { background: #d4edda; color: #155724; }
+  .sheet-status.disconnected { background: #e9ecef; color: #6c757d; }
+  .sheet-status.sending { background: #fff3cd; color: #856404; }
+  .sheet-status.error { background: #f8d7da; color: #721c24; }
+  .sheet-status.loading { background: #e3f2fd; color: #1565c0; }
+
+  /* ===== SCORE SUMMARY ===== */
+  .score-summary {
+    background: white; border-radius: 12px; padding: 20px 24px;
+    margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .score-circle {
+    width: 90px; height: 90px; border-radius: 50%; border: 6px solid #e0e4f0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: border-color 0.3s;
+  }
+  .score-circle .score-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+  .score-circle .score-max { font-size: 0.7rem; color: #999; }
+  .score-details { flex: 1; min-width: 200px; }
+  .score-details h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .progress-bar { height: 10px; background: #eee; border-radius: 10px; overflow: hidden; margin-bottom: 4px; }
+  .progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg,var(--primary),var(--primary-dark)); transition: width 0.4s; }
+  .score-pct { font-size: 0.85rem; color: #555; }
+  .score-status { font-size: 0.9rem; font-weight: 700; padding: 4px 14px; border-radius: 20px; }
+  .status-pass { background: #d4edda; color: #155724; }
+  .status-fail { background: #f8d7da; color: #721c24; }
+  .status-warn { background: #fff3cd; color: #856404; }
+
+  /* ===== SECTION ===== */
+  .section { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; cursor: pointer; border-left: 4px solid var(--primary);
+    user-select: none; transition: background 0.15s;
+  }
+  .section-header:hover { background: var(--primary-soft); }
+  .section-header.mandatory { border-left-color: #e74c3c; }
+  .section-header-left { display: flex; align-items: center; gap: 10px; }
+  .section-icon { font-size: 1.3rem; }
+  .section-title { font-weight: 700; font-size: 0.97rem; }
+  .section-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #ffeaea; color: #c0392b; }
+  .section-badge.basic { background: #e8f5e9; color: #2e7d32; }
+  .section-score-pill { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
+  .pill { padding: 3px 10px; border-radius: 20px; background: #f0f0f0; color: #555; font-size: 0.8rem; }
+  .pill.full { background: #d4edda; color: #155724; }
+  .pill.partial { background: #fff3cd; color: #856404; }
+  .pill.zero { background: #f8d7da; color: #721c24; }
+  .section-toggle { font-size: 1rem; color: #aaa; transition: transform 0.2s; }
+  .section-toggle.open { transform: rotate(180deg); }
+  .section-body { display: none; padding: 0 20px 16px; }
+  .section-body.open { display: block; }
+
+  /* ===== CRITERION ===== */
+  .criterion { border: 1.5px solid #eef0f5; border-radius: 10px; padding: 14px 16px; margin-top: 12px; transition: border-color 0.2s; }
+  .criterion:hover { border-color: var(--primary-light); }
+  .criterion.pass { border-color: #81c784; background: #f9fff9; }
+  .criterion.fail { border-color: #e57373; background: #fff9f9; }
+  .criterion.na   { border-color: #90caf9; background: #f5faff; }
+  .criterion-top { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .criterion-text { flex: 1; min-width: 200px; }
+  .criterion-text strong { font-size: 0.9rem; display: block; margin-bottom: 3px; }
+  .criterion-text .desc { font-size: 0.8rem; color: #666; line-height: 1.5; }
+  .criterion-text strong { cursor: pointer; }
+  .criterion-text strong:hover { color: var(--primary); text-decoration: underline; }
+
+  /* ===== CONFIRM DIALOG ===== */
+  .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9500; align-items: center; justify-content: center; padding: 20px; }
+  .confirm-overlay.open { display: flex; }
+  .confirm-box { background: white; border-radius: 16px; max-width: 380px; width: 100%; padding: 28px 24px 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.2); text-align: center; }
+  .confirm-box p { font-size: 1rem; color: #333; margin-bottom: 20px; line-height: 1.5; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  .confirm-actions .btn { min-width: 100px; justify-content: center; }
+
+  /* ===== CRITERION POPUP ===== */
+  .crit-popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 8000; align-items: center; justify-content: center; padding: 20px; }
+  .crit-popup-overlay.open { display: flex; }
+  .crit-popup { background: white; border-radius: 16px; max-width: 520px; width: 100%; padding: 28px 24px 24px; position: relative; box-shadow: 0 8px 40px rgba(0,0,0,0.18); max-height: 80vh; overflow-y: auto; }
+  .crit-popup-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #999; line-height: 1; }
+  .crit-popup-close:hover { color: #333; }
+  .crit-popup-title { font-size: 1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 14px; padding-right: 24px; }
+  .crit-popup-body { font-size: 0.88rem; color: #444; line-height: 1.7; }
+  .criterion-text .mandatory-tag { display: inline-block; font-size: 0.68rem; font-weight: 700; background: #fce8e8; color: #c0392b; padding: 1px 6px; border-radius: 8px; margin-top: 4px; }
+  .criterion-controls { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .radio-group { display: flex; gap: 6px; }
+  .radio-group label { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; cursor: pointer; font-weight: 600; padding: 5px 10px; border-radius: 20px; border: 1.5px solid #ddd; transition: all 0.15s; }
+  .radio-group input[type=radio] { display: none; }
+  .radio-group label.pass-lbl { color: #2e7d32; border-color: #81c784; }
+  .radio-group label.fail-lbl { color: #c62828; border-color: #e57373; }
+  .radio-group label.na-lbl { color: #1565c0; border-color: #90caf9; }
+  .radio-group label.selected-pass { background: #e8f5e9; border-color: #43a047; }
+  .radio-group label.selected-fail { background: #ffebee; border-color: #e53935; }
+  .radio-group label.selected-na { background: #e3f2fd; border-color: #1e88e5; }
+  .criterion-notes { margin-top: 10px; }
+  .criterion-notes textarea { width: 100%; border: 1.5px solid #e0e4f0; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; resize: vertical; min-height: 52px; font-family: inherit; color: #333; transition: border-color 0.2s; }
+  .criterion-notes textarea:focus { outline: none; border-color: var(--primary); }
+  .photo-area { margin-top: 10px; }
+  .photo-upload-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--primary); border: 1.5px dashed var(--primary); border-radius: 8px; padding: 6px 14px; cursor: pointer; transition: all 0.15s; background: var(--primary-soft); }
+  .photo-upload-btn:hover { background: var(--primary-soft); }
+  .photo-upload-btn input { display: none; }
+  .photo-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .photo-thumb { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1.5px solid #e0e4f0; }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .del-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* ===== ACTIONS ===== */
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+  .btn { padding: 10px 22px; border-radius: 8px; font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+  .btn-primary { background: linear-gradient(135deg,var(--primary),var(--primary-dark)); color: white; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(238,123,60,0.4); }
+  .btn-secondary { background: white; color: var(--primary); border: 2px solid var(--primary); }
+  .btn-secondary:hover { background: var(--primary-soft); }
+  .btn-success { background: linear-gradient(135deg,#43a047,#2e7d32); color: white; }
+  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(67,160,71,0.4); }
+  .btn-danger { background: white; color: #e53935; border: 2px solid #e53935; }
+  .btn-danger:hover { background: #fff5f5; }
+  .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+  /* ===== KẾT QUẢ TAB ===== */
+  .results-empty { text-align: center; padding: 60px 20px; color: #aaa; }
+  .results-empty .icon { font-size: 3.5rem; margin-bottom: 12px; }
+  .results-empty p { font-size: 0.95rem; }
+
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  .result-card {
+    background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    overflow: visible; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s;
+    border: 2px solid transparent; position: relative;
+  }
+  .result-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  .result-card.selected { border-color: var(--primary); }
+  .result-card-top { padding: 16px 18px 12px; position: relative; }
+  .result-card-menu-btn {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px;
+    border: none; background: rgba(0,0,0,0.05); border-radius: 8px; cursor: pointer;
+    font-size: 1.1rem; font-weight: 800; color: #555; line-height: 30px; text-align: center;
+    z-index: 2;
+  }
+  .result-card-menu-btn:hover { background: rgba(0,0,0,0.1); }
+  .result-card-menu {
+    display: none; position: absolute; top: 44px; right: 10px; background: white;
+    border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); overflow: hidden;
+    z-index: 10; min-width: 150px; border: 1px solid #eee;
+  }
+  .result-card-menu.open { display: block; }
+  .result-card-menu button {
+    display: block; width: 100%; text-align: left; padding: 10px 14px; border: none;
+    background: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #333;
+  }
+  .result-card-menu button:hover { background: #f5f5f7; }
+  .result-card-menu button.danger { color: #c0392b; }
+  .result-card-menu button + button { border-top: 1px solid #f0f0f0; }
+  .result-card-store { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+  .result-card-meta { font-size: 0.78rem; color: #888; }
+  .result-card-score {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px; border-top: 1px solid #f0f0f0;
+  }
+  .result-card-pts { font-size: 1.2rem; font-weight: 800; }
+  .result-card-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .badge-pass { background: #d4edda; color: #155724; }
+  .badge-fail { background: #f8d7da; color: #721c24; }
+  .badge-warn { background: #fff3cd; color: #856404; }
+  .result-card-bar { height: 4px; background: #eee; }
+  .result-card-bar-fill { height: 100%; transition: width 0.4s; }
+
+  /* ===== DETAIL PANEL ===== */
+  .detail-panel {
+    background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    margin-top: 24px; overflow: hidden;
+  }
+  .detail-header {
+    background: linear-gradient(135deg,var(--primary),var(--primary-dark)); color: white;
+    padding: 20px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .detail-header-info h2 { font-size: 1.2rem; font-weight: 800; }
+  .detail-header-info p { font-size: 0.82rem; opacity: 0.85; margin-top: 3px; }
+  .detail-score-block { text-align: center; flex-shrink: 0; }
+  .detail-score-num { font-size: 2rem; font-weight: 900; line-height: 1; }
+  .detail-score-sub { font-size: 0.75rem; opacity: 0.8; }
+
+  .detail-summary {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .detail-summary-item { padding: 14px 18px; border-right: 1px solid #f0f0f0; }
+  .detail-summary-item:last-child { border-right: none; }
+  .detail-summary-item .label { font-size: 0.72rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .detail-summary-item .val { font-size: 1rem; font-weight: 700; }
+
+  .detail-sections { padding: 16px 20px; }
+  .detail-section-row { margin-bottom: 12px; }
+  .detail-section-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .detail-criteria-list { display: flex; flex-direction: column; gap: 4px; }
+
+  /* ===== DETAIL ZONE GRID ===== */
+  .detail-zone-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+  }
+  .detail-zone-card {
+    background: white; border: 1.5px solid #eee; border-radius: 10px;
+    padding: 14px 12px; cursor: pointer; transition: all 0.15s; text-align: center; position: relative;
+  }
+  .detail-zone-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(238,123,60,0.12); }
+  .detail-zone-card .dz-icon { font-size: 1.8rem; margin-bottom: 6px; }
+  .detail-zone-card .dz-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; line-height: 1.25; }
+  .detail-zone-card .dz-score { font-size: 0.95rem; font-weight: 800; }
+  .detail-zone-card .dz-fail-badge {
+    position: absolute; top: 8px; right: 8px; background: #fce8e8; color: #c0392b;
+    font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 8px;
+  }
+  .detail-zone-back-btn {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--primary-soft); border: none;
+    border-radius: 8px; padding: 7px 14px; font-size: 0.85rem; font-weight: 700; color: #444;
+    cursor: pointer; margin-bottom: 14px;
+  }
+  .detail-zone-back-btn:hover { background: #f6dcc0; }
+  .detail-zone-section-title { font-size: 0.95rem; font-weight: 800; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .detail-criterion-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; background: #fafafa; border: 1px solid #f0f0f0;
+  }
+  .detail-criterion-row.r-pass { background: #f4fff4; border-color: #c8e6c9; }
+  .detail-criterion-row.r-fail { background: #fff4f4; border-color: #ffcdd2; }
+  .detail-criterion-row.r-na   { background: #f0f8ff; border-color: #bbdefb; }
+  .detail-criterion-badge { flex-shrink: 0; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-top: 1px; }
+  .detail-criterion-badge.pass { background: #d4edda; color: #155724; }
+  .detail-criterion-badge.fail { background: #f8d7da; color: #721c24; }
+  .detail-criterion-badge.na   { background: #d1ecf1; color: #0c5460; }
+  .detail-criterion-badge.none { background: #e9ecef; color: #6c757d; }
+  .detail-criterion-text { flex: 1; }
+  .detail-criterion-text .cname { font-weight: 600; }
+  .detail-criterion-text .cnote { color: #666; margin-top: 3px; font-style: italic; }
+  .detail-criterion-photos { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .detail-criterion-photos img { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
+
+  /* Lightbox */
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; align-items: center; justify-content: center; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  .lightbox-close { position: fixed; top: 16px; right: 20px; color: white; font-size: 2rem; cursor: pointer; font-weight: 700; }
+
+  .results-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .results-count { font-size: 0.85rem; color: #888; }
+
+  /* ===== ZONE PICKER ===== */
+  .zone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .zone-card {
+    background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 22px 20px; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s;
+    border: 2.5px solid transparent; position: relative; overflow: hidden;
+  }
+  .zone-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.13); }
+  .zone-card.done { border-color: #43a047; }
+  .zone-card.partial { border-color: #ffa726; }
+  .zone-card-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .zone-card-title { font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
+  .zone-card-sub { font-size: 0.78rem; color: #888; margin-bottom: 12px; }
+  .zone-card-progress { height: 6px; background: #eee; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+  .zone-card-bar { height: 100%; border-radius: 6px; transition: width 0.3s; }
+  .zone-card-stats { display: flex; justify-content: space-between; font-size: 0.75rem; color: #999; }
+  .zone-card-stats .done-count { font-weight: 700; color: #43a047; }
+  .zone-card-stats .fail-count { font-weight: 700; color: #e53935; }
+  .zone-card-arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 1.3rem; color: #ccc; }
+
+  /* ===== ZONE DETAIL (breadcrumb + back) ===== */
+  .zone-breadcrumb {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+    background: white; border-radius: 10px; padding: 10px 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  }
+  .zone-back-btn {
+    background: none; border: none; cursor: pointer; font-size: 1.1rem;
+    color: var(--primary); font-weight: 700; padding: 2px 6px; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .zone-back-btn:hover { background: var(--primary-soft); }
+  .zone-breadcrumb-text { font-size: 0.9rem; font-weight: 700; color: #444; }
+  .zone-breadcrumb-icon { font-size: 1.1rem; }
+
+  @media print {
+    body { background: white; }
+    .page-header { background: #333 !important; -webkit-print-color-adjust: exact; }
+    .sidebar, .sidebar-toggle, .sidebar-overlay, .actions, .results-toolbar { display: none !important; }
+    .app-layout { display: block; }
+    .section-body { display: block !important; }
+    .section-toggle { display: none; }
+    #panel-results .results-grid { display: none; }
+    .zone-breadcrumb, #zonePickerView { display: none !important; }
+    #zoneSectionsView { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== AUTH: Đang kiểm tra đăng nhập ===== -->
+<div class="auth-screen" id="authLoading">
+  <div class="auth-card">
+    <div class="auth-spinner"></div>
+    <h1>Đang kiểm tra đăng nhập...</h1>
+    <p>Vui lòng chờ trong giây lát</p>
+  </div>
+</div>
+
+<!-- ===== AUTH: Màn hình đăng nhập ===== -->
+<div class="auth-screen" id="authLogin" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">📋</div>
+    <h1>Mongo QC</h1>
+    <p>Đăng nhập bằng tài khoản Google để truy cập hệ thống kiểm soát chất lượng.</p>
+    <div class="auth-gbtn-wrap" id="gSignInBtn"></div>
+    <div class="auth-status" id="authError" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ===== AUTH: Chưa được cấp quyền ===== -->
+<div class="auth-screen" id="authDenied" style="display:none;">
+  <div class="auth-card">
+    <img class="auth-user-pic" id="deniedPic" src="" alt="">
+    <h1>Chưa được cấp quyền</h1>
+    <div class="auth-email" id="deniedEmail"></div>
+    <p>Tài khoản này chưa được quản trị viên cấp quyền sử dụng hệ thống. Vui lòng liên hệ quản trị viên để được thêm vào danh sách tài khoản.</p>
+    <button class="auth-logout-btn" onclick="authLogout()">Đăng xuất</button>
+  </div>
+</div>
+
+<div class="app-layout" id="appLayout">
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">📋</div>
+      <div>
+        <div class="sidebar-title">Mongo QC</div>
+        <div class="sidebar-subtitle">Kiểm soát chất lượng</div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-group-label">QC</div>
+      <button class="sidebar-link active" id="tab-scoring" onclick="switchTab('scoring')">
+        <span class="sidebar-link-icon">📝</span> Chấm Điểm
+      </button>
+      <button class="sidebar-link" id="tab-results" onclick="switchTab('results')">
+        <span class="sidebar-link-icon">📊</span> Kết Quả <span class="badge" id="resultsBadge">0</span>
+      </button>
+    </div>
+    <div class="sidebar-section" id="adminSection" style="display:none;">
+      <div class="sidebar-group-label">Quản trị</div>
+      <button class="sidebar-link" id="tab-users" onclick="switchTab('users')">
+        <span class="sidebar-link-icon">👥</span> Quản Lý Tài Khoản
+      </button>
+    </div>
+    <div class="sidebar-user" id="sidebarUser" style="display:none;">
+      <img id="sidebarUserPic" src="" alt="">
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebarUserName"></div>
+        <div class="sidebar-user-role" id="sidebarUserRole"></div>
+      </div>
+      <button class="sidebar-user-logout" id="sidebarLogoutBtn" title="Đăng xuất">⎋</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <header class="page-header">
+      <h1 id="pageTitle">📝 Chấm Điểm</h1>
+      <p id="pageSubtitle">Tiêu chuẩn QC — 5 khu vực · 16 hạng mục · 48 tiêu chí · Phiên bản v2.0 (06/2026)</p>
+    </header>
+
+<!-- ===== TAB: CHẤM ĐIỂM ===== -->
+<div class="tab-panel active" id="panel-scoring">
+  <div class="container">
+
+    <!-- Sheet status bar (URL hardcoded) -->
+    <div style="background:var(--primary-soft);border:1.5px solid #f6dcc0;border-radius:12px;padding:10px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.2rem;">📊</span>
+      <span style="font-size:0.82rem;color:#555;flex:1;">Dữ liệu được đồng bộ lên Google Sheet tự động khi lưu kết quả.</span>
+      <span class="sheet-status disconnected" id="sheetStatus">Đang kiểm tra...</span>
+    </div>
+    <input type="hidden" id="sheetWebhookUrl" value="https://script.google.com/macros/s/AKfycbyhykOgyEgjYXYT-rn_BVJcnuJ98l2E3YW9QnziedX4n-DY0G6BOlMulZ6qsD8zec_F/exec">
+
+    <div class="store-info">
+      <div>
+        <label>Tên cửa hàng</label>
+        <select id="storeName">
+          <option value=""></option>
+          <option>Mongo 353 Trương Định</option>
+          <option>Mongo 345 Bạch Mai</option>
+          <option>Mongo 15 Ngõ Gốc Đề</option>
+          <option>Mongo 97A Khâm Thiên</option>
+          <option>Mongo 448 Trần Cung</option>
+          <option>Mongo 110 Khương Trung</option>
+          <option>Mongo 106 Triều Khúc</option>
+          <option>Mongo 211 Lương Thế Vinh</option>
+        </select>
+      </div>
+      <div>
+        <label>Người kiểm tra</label>
+        <input type="text" id="inspector" placeholder="Tên giám sát / QC">
+      </div>
+      <div>
+        <label>Ngày kiểm tra</label>
+        <input type="date" id="inspectDate">
+      </div>
+    </div>
+
+    <div class="score-summary">
+      <div class="score-circle" id="scoreCircle">
+        <span class="score-num" id="scoreNum">0</span>
+        <span class="score-max" id="scoreMax">/ 0</span>
+      </div>
+      <div class="score-details">
+        <h3 id="scoreLabel">Chưa chấm điểm</h3>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <span class="score-pct" id="scorePct">0%</span>
+          <span class="score-status" id="scoreStatus"></span>
+        </div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:0.75rem;color:#999;margin-bottom:4px">⚠ Bắt buộc</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#e53935" id="mandatoryFail">0 lỗi</div>
+      </div>
+    </div>
+
+    <!-- View 1: Chọn khu vực -->
+    <div id="zonePickerView">
+      <div class="zone-grid" id="zoneGrid"></div>
+      <div class="actions">
+        <button class="btn btn-success" onclick="saveResult()">💾 Lưu kết quả</button>
+        <button class="btn btn-secondary" onclick="window.print()">🖨 In báo cáo</button>
+        <button class="btn btn-danger" onclick="resetAll()">🔄 Làm lại từ đầu</button>
+      </div>
+    </div>
+
+    <!-- View 2: Hạng mục trong khu vực -->
+    <div id="zoneSectionsView" style="display:none;">
+      <div class="zone-breadcrumb">
+        <button class="zone-back-btn" onclick="showZonePicker()">← Quay lại</button>
+        <span class="zone-breadcrumb-icon" id="breadcrumbIcon"></span>
+        <span class="zone-breadcrumb-text" id="breadcrumbTitle"></span>
+      </div>
+      <div id="sectionsContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: KẾT QUẢ ===== -->
+<div class="tab-panel" id="panel-results">
+  <div class="container">
+    <div class="results-toolbar">
+      <div>
+        <strong style="font-size:1.05rem;">📊 Kết Quả Kiểm Tra</strong>
+        <span class="results-count" id="resultsCount"></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="syncFromSheet()" id="btnSync">🔄 Đồng bộ từ Sheet</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportAllPDF()" id="btnExportPDF">📄 Xuất PDF</button>
+        <button class="btn btn-danger btn-sm" id="btnClearAll" onclick="clearAllResults()">🗑 Xóa tất cả</button>
+      </div>
+    </div>
+
+    <div id="resultsLoading" class="results-empty" style="display:none;">
+      <div class="icon">⏳</div>
+      <p>Đang tải kết quả từ Google Sheet...</p>
+    </div>
+
+    <div id="resultsEmpty" class="results-empty" style="display:none;">
+      <div class="icon">📭</div>
+      <p>Chưa có kết quả nào được lưu.<br>Hãy chấm điểm và nhấn <b>Lưu kết quả</b> để thêm.</p>
+    </div>
+
+    <div class="results-grid" id="resultsGrid"></div>
+
+    <div class="detail-panel" id="detailPanel" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ===== TAB: QUẢN LÝ TÀI KHOẢN ===== -->
+<div class="tab-panel" id="panel-users">
+  <div class="container">
+    <div class="results-toolbar">
+      <div>
+        <strong style="font-size:1.05rem;">👥 Quản Lý Tài Khoản</strong>
+        <span class="results-count" id="usersCount"></span>
+      </div>
+      <div>
+        <button class="btn btn-primary btn-sm" onclick="openUserForm()">➕ Thêm tài khoản</button>
+      </div>
+    </div>
+
+    <div class="users-table-wrap">
+      <table class="users-table">
+        <thead><tr><th>Email</th><th>Tên</th><th>Vai trò</th><th>Cửa hàng / Khu vực</th><th></th></tr></thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="usersEmpty" class="results-empty" style="display:none;">
+      <div class="icon">👥</div>
+      <p>Chưa có tài khoản nào được cấp quyền.</p>
+    </div>
+
+    <!-- Form thêm/sửa tài khoản -->
+    <div class="store-info" id="userFormBox" style="display:none; grid-template-columns: 1fr 1fr;">
+      <div>
+        <label>Email Google</label>
+        <input type="email" id="userFormEmail" placeholder="ten@gmail.com">
+      </div>
+      <div>
+        <label>Tên hiển thị (tùy chọn)</label>
+        <input type="text" id="userFormName" placeholder="Nguyễn Văn A">
+      </div>
+      <div>
+        <label>Vai trò</label>
+        <select id="userFormRole" onchange="onUserFormRoleChange()">
+          <option value="admin">Quản trị viên</option>
+          <option value="qc">Chuyên viên QC</option>
+          <option value="area">Quản lý khu vực</option>
+          <option value="store">Cửa hàng</option>
+        </select>
+      </div>
+      <div id="userFormStoresWrap" style="display:none;">
+        <label>Cửa hàng được xem</label>
+        <div class="store-checklist" id="userFormStores"></div>
+      </div>
+      <div style="grid-column: 1 / -1; display:flex; gap:10px; margin-top:6px;">
+        <button class="btn btn-primary btn-sm" onclick="saveUserForm()">💾 Lưu</button>
+        <button class="btn btn-secondary btn-sm" onclick="closeUserForm()">Hủy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p id="confirmMsg"></p>
+    <div class="confirm-actions">
+      <button class="btn btn-danger" id="confirmOkBtn">Xóa</button>
+      <button class="btn btn-secondary" onclick="closeConfirm()">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Criterion Popup -->
+<div class="crit-popup-overlay" id="critPopupOverlay" onclick="closeCritPopup(event)">
+  <div class="crit-popup">
+    <button class="crit-popup-close" onclick="closeCritPopup()">✕</button>
+    <div class="crit-popup-title" id="critPopupTitle"></div>
+    <div class="crit-popup-body" id="critPopupBody"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+  <img id="lightboxImg" src="">
+</div>
+
+<script>
+// ========== DATA ==========
+const SECTIONS = [
+  // ===== I. NGOẠI QUAN CỬA HÀNG =====
+  {
+    id: 'nq_bien_hieu', title: 'Bảng Biển Hiệu & Biển Vẫy LED', icon: '🪧', mandatory: false,
+    criteria: [
+      { id: 'nq_bh_vs', text: 'Vệ sinh bảng biển hiệu', desc: 'Không bắt buộc phải vệ sinh trừ khi quá bẩn, bám nhiều đất bùn; có thể dễ dàng nhìn thấy khi đứng từ xa.', mandatory: false },
+      { id: 'nq_bh_bc', text: 'Bố cục biển hiệu', desc: 'N/A', mandatory: false },
+      { id: 'nq_bh_tt', text: 'Tình trạng đèn LED biển hiệu', desc: 'Hệ thống đèn LED sáng đều 100%, không cháy/nhấp nháy bóng. Không bị vỡ hoặc rách, tình trạng còn nguyên vẹn.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_standee', title: 'Standee, Banner & Poster Quảng Cáo', icon: '🖼️', mandatory: false,
+    criteria: [
+      { id: 'nq_sd_vs', text: 'Vệ sinh standee, banner, poster', desc: 'Standee, banner không bị bám bụi, lấm bẩn. Poster trong bảng đèn LED/mica không bị mờ đục hoặc có vết ố.', mandatory: false },
+      { id: 'nq_sd_bc', text: 'Bố cục standee, banner, poster', desc: 'Đặt đúng vị trí thu hút tầm nhìn, không cản trở lối đi/chỗ đứng khách. Ưu tiên hiển thị chương trình đang chạy, không trưng bày ấn phẩm chương trình đã ngừng.', mandatory: false },
+      { id: 'nq_sd_tt', text: 'Tình trạng standee, banner, poster', desc: 'Ấn phẩm đặt trong mica/standee/bảng LED phải nguyên vẹn, nội dung rõ ràng, không mờ nhòe. Khung mica/standee/bảng LED không bị gãy vỡ. Bóng LED sáng đầy đủ, không bị cháy.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_quay_ngoai', title: 'Mặt Ngoài Quầy Thu Ngân / Lấy Đồ', icon: '🏪', mandatory: false,
+    criteria: [
+      { id: 'nq_qn_vs', text: 'Vệ sinh mặt ngoài quầy', desc: 'Bề mặt ốp quầy (gỗ/inox) luôn sạch sẽ, khô ráo, không dính vết bẩn. Khe kẽ, viền quầy không đóng bụi. Màn hình Order, bề mặt bảng menu sạch, không bám bụi, không có vết bẩn.', mandatory: false },
+      { id: 'nq_qn_bc', text: 'Bố cục mặt ngoài quầy', desc: 'Khu vực để dụng cụ đóng gói (ống hút, thìa, giấy ăn, túi bóng) sắp xếp gọn gàng, đúng vị trí trong ống đựng đồ, không bày tràn lan. Không để vật dụng cá nhân hoặc đồ không liên quan lọt vào tầm nhìn khách.', mandatory: false },
+      { id: 'nq_qn_tt', text: 'Tình trạng mặt ngoài quầy', desc: 'Bề mặt quầy nguyên vẹn, không sứt mẻ, bong tróc nẹp hay xước xát nặng.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_san_ngoai', title: 'Khu Vực Nền Nhà Ngoài Quầy (Khách Chờ/Order)', icon: '🚶', mandatory: false,
+    criteria: [
+      { id: 'nq_sn_vs', text: 'Vệ sinh sàn ngoài quầy', desc: 'Sàn nhà sạch sẽ, khô ráo, không có rác, vết giày dép bẩn, vệt nước hay kẹo cao su. Góc tường và chân tủ/quầy tiếp giáp sàn không đọng bụi, rác nhỏ, không có vệt đen.', mandatory: false },
+      { id: 'nq_sn_bc', text: 'Bố cục sàn ngoài quầy', desc: 'Ghế ngồi đợi cho khách được xếp ngay ngắn, gọn gàng. Không để dụng cụ, thiết bị, nguyên vật liệu bừa bãi, không đúng vị trí quy định.', mandatory: false },
+      { id: 'nq_sn_tt', text: 'Tình trạng thiết bị khu vực ngoài quầy', desc: 'Hệ thống đèn trong cửa hàng đảm bảo hoạt động ổn định, đủ độ sáng, không bị cháy bóng. Ghế ngồi chắc chắn, sạch sẽ, không gãy, vỡ.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_binh_chua_chay', title: 'Bình Chữa Cháy (Bình Bột MZ, Bình Khí CO2)', icon: '🧯', mandatory: true,
+    criteria: [
+      { id: 'nq_bcc_vs', text: 'Vệ sinh bình chữa cháy', desc: 'Vỏ bình sạch sẽ, không bám lớp bụi dày hay mạng nhện do để lâu ngày. Không dính vệt nước, dầu mỡ (đặc biệt khi đặt gần khu vực bếp nấu bán thành phẩm).', mandatory: false },
+      { id: 'nq_bcc_bc', text: 'Bố cục bình chữa cháy', desc: 'Đặt đúng vị trí được phê duyệt trên bản vẽ thẩm duyệt PCCC (thường gần cửa ra vào, lối thoát hiểm, hoặc sát khu vực bếp nấu). Tuyệt đối không bị che khuất bởi hàng hóa, thùng carton hay các thứ khác. Đặt trên giá/kệ hoặc treo cẩn thận, không để trực tiếp xuống nền nhà dễ gây rỉ sét đáy bình.', mandatory: true },
+      { id: 'nq_bcc_tt', text: 'Tình trạng bình chữa cháy', desc: '[Quan trọng] Kim đồng hồ đo áp suất (trên bình bột) phải chỉ ở vạch xanh. Chốt an toàn và kẹp chì niêm phong còn nguyên vẹn, chưa bị rút/cắt rách. Vòi phun, loa phun nguyên vẹn, không bị nứt vỡ hay gãy gập. Tem kiểm định và tem bảo dưỡng định kỳ trên thân bình còn thời hạn sử dụng.', mandatory: true },
+    ]
+  },
+  {
+    id: 'nq_bang_pccc', title: 'Bảng Tiêu Lệnh & Nội Quy PCCC', icon: '📋', mandatory: false,
+    criteria: [
+      { id: 'nq_bp_vs', text: 'Vệ sinh bảng tiêu lệnh & nội quy PCCC', desc: 'Bề mặt bảng sạch sẽ, chữ hiển thị rõ ràng. Không bị lấm bẩn, ố vàng hay có màng nhện giăng bám.', mandatory: false },
+      { id: 'nq_bp_bc', text: 'Bố cục bảng tiêu lệnh & nội quy PCCC', desc: 'Treo ngay phía trên hoặc sát cạnh khu vực đặt bình chữa cháy. Vị trí treo phải ở nơi dễ nhìn, độ cao vừa tầm mắt của nhân viên và khách hàng. Không bị che khuất bởi rèm, cây cảnh trang trí hay các ấn phẩm banner, poster khuyến mãi.', mandatory: false },
+      { id: 'nq_bp_tt', text: 'Tình trạng bảng tiêu lệnh & nội quy PCCC', desc: 'Bảng (thường làm bằng mica hoặc tôn) còn nguyên vẹn, không bị nứt vỡ, cong vênh. Chữ in và hình ảnh minh họa trên tiêu lệnh sắc nét, không bị bong tróc hay bạc màu làm mất thông tin. Bảng được ghim/khoan gắn chắc chắn vào tường, không lỏng lẻo hay rơi rớt.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_quat_treo', title: 'Quạt Treo Tường', icon: '🌀', mandatory: false,
+    criteria: [
+      { id: 'nq_qt_vs', text: 'Vệ sinh quạt treo tường', desc: 'Cánh quạt, lồng quạt sạch sẽ; không bám lớp bụi đen dày hay mạng nhện (nguy cơ phát tán bụi trực tiếp vào luồng không khí). Thân quạt không dính vệt dầu mỡ, siro hay bụi bẩn.', mandatory: false },
+      { id: 'nq_qt_bc', text: 'Bố cục quạt treo tường', desc: 'Hướng gió điều hướng hợp lý để làm mát cho nhân viên hoặc khách hàng mà không làm bay giấy tờ, bill order.', mandatory: false },
+      { id: 'nq_qt_tt', text: 'Tình trạng quạt treo tường', desc: 'Động cơ chạy êm, không phát ra tiếng rít, tiếng kêu lạch cạch khi quay. Chức năng đảo chiều (tuốc năng) và các mức số hoạt động bình thường. Lồng quạt được gài chốt chắc chắn, các nan lồng nguyên vẹn không gãy rụng. Quạt được khoan/gắn lên tường vững chắc, không rung lắc mạnh khi bật số to.', mandatory: false },
+    ]
+  },
+  {
+    id: 'nq_quat_san', title: 'Quạt Sàn / Quạt Công Nghiệp', icon: '🌬️', mandatory: false,
+    criteria: [
+      { id: 'nq_qs_vs', text: 'Vệ sinh quạt sàn / quạt công nghiệp', desc: 'Cánh quạt, lồng quạt sạch sẽ; không bám lớp bụi đen dày hay mạng nhện (nguy cơ phát tán bụi trực tiếp vào luồng không khí). Thân quạt không dính vệt dầu mỡ, siro hay bụi bẩn. Động cơ phía sau không bị bít kín bởi bụi bẩn (gây nóng máy và giảm tuổi thọ).', mandatory: false },
+      { id: 'nq_qs_bc', text: 'Bố cục quạt sàn / quạt công nghiệp', desc: 'Đặt ở vị trí sát tường hoặc góc khuất khi sử dụng. Không đặt chắn giữa luồng di chuyển chính của nhân viên (nguy cơ va đập, đổ quạt). Quản lý dây điện: Dây cáp điện phải được thu gọn sát mép tường. Tuyệt đối không vắt ngang qua lối đi hoặc khu vực bồn rửa ướt át gây nguy cơ vấp ngã và chập điện.', mandatory: false },
+      { id: 'nq_qs_tt', text: 'Tình trạng quạt sàn / quạt công nghiệp', desc: 'Lồng quạt trước/sau ghép nối chặt chẽ, không bị lỏng ốc hay bung lồng (rất nguy hiểm nếu nhân viên vô tình đụng phải). Cánh quạt không nứt, mẻ (gây mất cân bằng, rung lắc khi chạy). Dây điện nguyên vẹn, phích cắm không bị hở lõi đồng, nứt vỡ lớp vỏ cao su cách điện.', mandatory: false },
+    ]
+  },
+
+  // ===== II. QUẦY THU NGÂN =====
+  {
+    id: 'qtn_pos', title: 'Máy POS & Mặt Bàn Thu Ngân', icon: '🖥️', mandatory: false,
+    criteria: [
+      { id: 'qtn_pos_vs', text: 'Vệ sinh máy POS & mặt bàn', desc: 'Mặt cảm ứng POS, máy in bill/tem sạch, không dính vân tay hay vệt đường, mứt. Mặt bàn gỗ/inox khô ráo, lau sạch thường xuyên.', mandatory: false },
+      { id: 'qtn_pos_bc', text: 'Bố cục máy POS & mặt bàn', desc: 'Máy in đặt tại khu vực thuận tiện cho chỗ đứng của khách và nhân viên. Tuyệt đối không có điện thoại, đồ dùng cá nhân trên mặt quầy.', mandatory: true },
+      { id: 'qtn_pos_tt', text: 'Tình trạng máy POS & mặt bàn', desc: 'POS, máy in bill, in tem hoạt động bình thường, không cấn móp, vỡ. Dây điện, dây mạng được thít gọn gàng dưới gầm.', mandatory: false },
+    ]
+  },
+  {
+    id: 'qtn_ngan', title: 'Ngăn Bàn Thu Ngân', icon: '📦', mandatory: false,
+    criteria: [
+      { id: 'qtn_nb_vs', text: 'Vệ sinh ngăn bàn thu ngân', desc: 'Lòng ngăn bàn không bám bụi, khô ráo tuyệt đối, không có vệt đường, syrup.', mandatory: false },
+      { id: 'qtn_nb_bc', text: 'Bố cục ngăn bàn thu ngân', desc: 'Chia khay/khu vực rõ ràng: để sổ sách/bút, trữ cuộn in bill/tem. Với cửa hàng nhỏ có thể chứa ống hút, túi, thìa, cốc nhưng phải sắp gọn gàng, phân khu rõ ràng cho mỗi loại CCDC.', mandatory: false },
+      { id: 'qtn_nb_tt', text: 'Tình trạng ngăn bàn thu ngân', desc: 'Ngăn bàn không bị trùng, võng xuống. Tem in, bill, sổ sách nguyên vẹn, không bị dính nước, rách. Các thiết bị, công cụ, hàng hóa khác vẫn giữ nguyên tình trạng.', mandatory: false },
+    ]
+  },
+
+  // ===== III. KHU VỰC TRẢ ĐỒ =====
+  {
+    id: 'td_be_mat', title: 'Bề Mặt Quầy Trả Đồ', icon: '🛍️', mandatory: true,
+    criteria: [
+      { id: 'td_bm_vs', text: 'Vệ sinh bề mặt quầy trả đồ', desc: 'Sạch sẽ, khô ráo tuyệt đối. Khăn lau mặt quầy phải là khăn riêng, giặt sạch liên tục, không để lại mùi hôi hay vệt nước. Không dính vệt nước trà, đường hay sữa trên mặt bàn.', mandatory: true },
+      { id: 'td_bm_bc', text: 'Bố cục quầy trả đồ', desc: 'Mặt quầy thoáng, không gian đủ rộng để xếp ít nhất 4-6 ly cùng lúc. Máy dập nắp, ống đựng CCDC để gọn gàng.', mandatory: false },
+      { id: 'td_bm_tt', text: 'Tình trạng quầy trả đồ', desc: 'Bề mặt quầy nguyên vẹn, không mẻ góc, xước xát sâu gây mất thẩm mỹ hoặc nguy hiểm. Khu vực đứng của nhân viên trả đồ không bị trơn trượt.', mandatory: false },
+    ]
+  },
+  {
+    id: 'td_may_dap', title: 'Máy Dập Nắp Cốc', icon: '🥤', mandatory: true,
+    criteria: [
+      { id: 'td_md_vs', text: 'Vệ sinh máy dập nắp', desc: 'Mâm nhiệt và khay đẩy cốc sạch sẽ, tuyệt đối không có vết đường/siro cháy két lại (gây mùi khét và kẹt máy). Vỏ máy và các bộ phận bên ngoài đều sạch sẽ, vệ sinh mỗi ngày.', mandatory: true },
+      { id: 'td_md_bc', text: 'Bố cục máy dập nắp', desc: 'N/A', mandatory: false },
+      { id: 'td_md_tt', text: 'Tình trạng máy dập nắp', desc: 'Máy dập kín nắp 100%, không rò rỉ đồ uống ra bên ngoài. Mâm nhiệt cắt màng ngọt, không để lại răng cưa hay rách mép quanh nắp cốc.', mandatory: true },
+    ]
+  },
+  {
+    id: 'td_ong_khay', title: 'Ống/Khay Đựng Cốc, Ống Hút, Thìa, Giấy Ăn', icon: '🥄', mandatory: false,
+    criteria: [
+      { id: 'td_ok_vs', text: 'Vệ sinh ống/khay đựng CCDC', desc: 'Các dụng cụ khay, ống không bám bụi dày, không dính vệt đường, syrup, nước. Cốc, ống hút, thìa, giấy ăn phải khô ráo, không bị bắn đường/syrup/nước từ khu vực nấu pha chế sang.', mandatory: false },
+      { id: 'td_ok_bc', text: 'Bố cục ống/khay đựng CCDC', desc: 'N/A', mandatory: false },
+      { id: 'td_ok_tt', text: 'Tình trạng ống/khay đựng CCDC', desc: 'Khay đựng cốc, CCDC nguyên vẹn, không nứt vỡ.', mandatory: false },
+    ]
+  },
+  {
+    id: 'td_ngan_ban', title: 'Ngăn Bàn Khu Vực Trả Đồ', icon: '📂', mandatory: false,
+    criteria: [
+      { id: 'td_nb_vs', text: 'Vệ sinh ngăn bàn trả đồ', desc: 'Lòng ngăn bàn không bám bụi, khô ráo tuyệt đối, không có vệt đường, syrup.', mandatory: false },
+      { id: 'td_nb_bc', text: 'Bố cục ngăn bàn trả đồ', desc: 'Chia khu vực rõ ràng cho từng loại CCDC. Với cửa hàng nhỏ có thể chứa nguyên liệu khô nhưng phải đảm bảo bảo quản theo quy định.', mandatory: false },
+      { id: 'td_nb_tt', text: 'Tình trạng ngăn bàn trả đồ', desc: 'Ngăn bàn không bị trùng, võng xuống. Các thiết bị, công cụ, hàng hóa giữ nguyên tình trạng, không bị rách hỏng. Nguyên liệu (nếu có) được bảo quản đúng quy định.', mandatory: false },
+    ]
+  },
+
+  // ===== IV. KHU VỰC NẤU ĐỒ =====
+  {
+    id: 'kn_mat_inox', title: 'Mặt Tủ Inox & Thiết Bị Nấu', icon: '🔥', mandatory: true,
+    criteria: [
+      { id: 'kn_mi_vs', text: 'Vệ sinh mặt tủ inox & thiết bị nấu', desc: 'Sạch sẽ, khô ráo khi không sử dụng. Khăn lau phải là khăn riêng, giặt sạch liên tục. Các thiết bị không dính bám vệt bẩn, vệt syrup, vệt nguyên vật liệu thừa.', mandatory: true },
+      { id: 'kn_mi_bc', text: 'Bố cục dây điện & thiết bị nấu', desc: 'Dây điện của ấm đun, nồi nấu phải đi gọn gàng, tuyệt đối không vắt ngang qua các bề mặt sinh nhiệt (mặt bếp từ). Giữ khoảng cách an toàn giữa các thiết bị đang sôi.', mandatory: true },
+      { id: 'kn_mi_tt', text: 'Tình trạng thiết bị nấu', desc: 'Bếp từ/Nồi trân châu hoạt động tốt. Ấm siêu tốc tự ngắt khi nước sôi. Dây cắm nguyên vẹn, phích cắm không lỏng lẻo, không hở lõi đồng. Các thiết bị còn nguyên vẹn, không bị cấn móp, vỡ.', mandatory: true },
+    ]
+  },
+  {
+    id: 'kn_ngan_nl', title: 'Ngăn Tủ Đựng Nguyên Liệu Nấu', icon: '🫙', mandatory: true,
+    criteria: [
+      { id: 'kn_nl_vs', text: 'Vệ sinh ngăn tủ nguyên liệu nấu', desc: 'Lòng tủ phải khô ráo, sạch sẽ hoàn toàn. Không có đường, bột, trân châu rơi vãi. Tuyệt đối không có dấu hiệu của côn trùng (kiến, gián) hay nấm mốc.', mandatory: true },
+      { id: 'kn_nl_bc', text: 'Bố cục ngăn tủ nguyên liệu nấu', desc: 'Các túi nguyên liệu dùng dở phải được kẹp kín miệng hoặc đổ vào hộp đậy kín. Tất cả nguyên liệu phải có nhãn Date và tuân thủ FIFO. Không để lẫn các vật dụng vệ sinh (khăn lau, hóa chất) vào ngăn này.', mandatory: true },
+      { id: 'kn_nl_tt', text: 'Tình trạng ngăn tủ nguyên liệu nấu', desc: 'Bản lề cánh tủ chắc chắn, đóng khít để ngăn ẩm và côn trùng và các dị vật bay vào khu vực để nguyên liệu.', mandatory: false },
+    ]
+  },
+  {
+    id: 'kn_ngan_ccdc', title: 'Ngăn Tủ Đựng CCDC (Xoong Nồi, Hộp Nhựa, Can Trà)', icon: '🍳', mandatory: false,
+    criteria: [
+      { id: 'kn_cc_vs', text: 'Vệ sinh ngăn tủ CCDC', desc: 'Toàn bộ CCDC phải được rửa sạch, úp khô hoàn toàn trước khi cất vào tủ. Các dụng cụ không đọng nước cặn, không có vệt nước và vệt bẩn.', mandatory: false },
+      { id: 'kn_cc_bc', text: 'Bố cục ngăn tủ CCDC', desc: 'Các CCDC cùng loại phải được sắp xếp cùng nhau. Sắp xếp để thuận tiện cho việc lấy ra sử dụng và tối ưu diện tích trong ngăn tủ.', mandatory: false },
+      { id: 'kn_cc_tt', text: 'Tình trạng CCDC', desc: 'Các thiết bị xoong, nồi, hộp không bị cấn, móp, vỡ.', mandatory: false },
+    ]
+  },
+
+  // ===== V. KHU VỰC PHA CHẾ =====
+  {
+    id: 'pc_may_moc', title: 'Máy Móc Thiết Bị Pha Chế', icon: '⚙️', mandatory: true,
+    criteria: [
+      { id: 'pc_mm_vs', text: 'Vệ sinh máy móc pha chế', desc: 'Vòi bơm đường, cối xay và nắp đậy sạch sẽ; không dính cặn siro hay bám mùi/màu của đồ uống trước đó. Đế máy xay và vỏ máy đường khô ráo tuyệt đối, không có nước/đường trào ra ngoài gây chập điện hay thu hút ruồi, kiến.', mandatory: true },
+      { id: 'pc_mm_bc', text: 'Bố cục máy móc pha chế', desc: 'Bố trí tối ưu luồng thao tác: Máy đường đặt sát khu bình ủ/thảm bar; Máy xay đặt sát thùng đá và bồn rửa. Dây điện của các máy luồn gọn gàng, tuyệt đối không cuộn rối trên mặt quầy tiếp xúc với nước.', mandatory: false },
+      { id: 'pc_mm_tt', text: 'Tình trạng máy móc pha chế', desc: 'Máy đường bơm chuẩn định lượng, phím bấm nhạy, không liệt. Máy xay chạy êm, lưỡi dao sắc bén, gioăng cao su ở đáy cối kín 100% không rỉ nước.', mandatory: true },
+    ]
+  },
+  {
+    id: 'pc_ban_mat', title: 'Bề Mặt Bàn Mát & Thảm Cao Su', icon: '🧊', mandatory: false,
+    criteria: [
+      { id: 'pc_bm_vs', text: 'Vệ sinh bàn mát & thảm cao su', desc: 'Thảm cao su sạch sẽ, úp ráo nước sau ca, không đọng cặn topping lọt xuống khe. Dụng cụ pha chế (shaker, ca đong, muỗng) rửa sạch sẽ sau mỗi lượt pha.', mandatory: false },
+      { id: 'pc_bm_bc', text: 'Bố cục bàn mát & thảm cao su', desc: 'Dụng cụ úp trên thảm theo thứ tự thao tác thường xuyên.', mandatory: false },
+      { id: 'pc_bm_tt', text: 'Tình trạng bàn mát & thảm cao su', desc: 'Thảm cao su không bị đứt gãy gai. Ca đong (jigger) và shaker nguyên vẹn, không mờ vạch chia dung tích.', mandatory: false },
+    ]
+  },
+  {
+    id: 'pc_tu_mat', title: 'Tủ Mát Dưới Gầm Quầy', icon: '❄️', mandatory: true,
+    criteria: [
+      { id: 'pc_tm_vs', text: 'Vệ sinh tủ mát gầm quầy', desc: 'Lòng tủ không có chất lỏng (trà, sữa) đổ tràn ra sàn tủ. Gioăng cao su cửa không bám bụi, không nấm mốc đen.', mandatory: true },
+      { id: 'pc_tm_bc', text: 'Bố cục tủ mát gầm quầy', desc: 'Bán thành phẩm/Nguyên liệu xếp theo FIFO (Nhập trước - Xuất trước). Mọi hộp đều có nắp đậy và dán tem Date/Time.', mandatory: true },
+      { id: 'pc_tm_tt', text: 'Tình trạng tủ mát gầm quầy', desc: 'Nhiệt độ duy trì chuẩn 2-6°C. Cánh tủ hít chặt, đóng mở trơn tru, không thất thoát nhiệt, gioăng cao su cánh tủ không bị bung.', mandatory: true },
+    ]
+  },
+  {
+    id: 'pc_ke_binh', title: 'Kệ Để Bình Trà Sữa', icon: '🫖', mandatory: false,
+    criteria: [
+      { id: 'pc_kb_vs', text: 'Vệ sinh kệ bình trà sữa', desc: 'Vòi rót trà sạch sẽ, không đóng cặn. Bề mặt ngoài bình ủ không dính vân tay hay dính đường, vệt trà. Khay hứng nước rỏ giọt sạch sẽ.', mandatory: false },
+      { id: 'pc_kb_bc', text: 'Bố cục kệ bình trà sữa', desc: 'Bình ủ xếp theo tần suất sử dụng. Tem hiển thị loại trà hướng thẳng ra ngoài. Độ cao kệ vừa tầm với của nhân viên.', mandatory: false },
+      { id: 'pc_kb_tt', text: 'Tình trạng kệ bình trà sữa', desc: 'Kệ inox chịu lực vững chắc, không võng/rung lắc. Vòi rót đóng/ngắt dứt khoát, không rò rỉ. Bình ủ giữ nhiệt tốt, không bị tỏa nhiệt ra vỏ ngoài.', mandatory: false },
+    ]
+  },
+  {
+    id: 'pc_tu_topping', title: 'Tủ Topping (Làm Mát Mặt & Tủ Gầm)', icon: '🍡', mandatory: true,
+    criteria: [
+      { id: 'pc_tt_vs', text: 'Vệ sinh tủ topping', desc: 'Bề mặt inox, các gờ rãnh giữa các khay không bám cặn đường, siro hay vụn topping rơi vãi. Tuyệt đối không lây nhiễm chéo (topping rớt từ khay này sang khay khác). Lòng tủ mát bên dưới khô ráo, không đọng nước hay tràn sữa/trà/topping. Gioăng cao su cửa tủ sạch, không nấm mốc đen.', mandatory: true },
+      { id: 'pc_tt_bc', text: 'Bố cục tủ topping', desc: 'Sắp xếp khay topping theo thứ tự thao tác tối ưu (loại dùng nhiều nhất gần tay thuận). Mỗi khay topping phải có vá/muỗng múc riêng biệt, không dùng chung chéo. Bán thành phẩm dự trữ tuân thủ FIFO và có tem Date/Time. Các nguyên liệu dùng dở phải được kẹp kín miệng hoặc đổ vào hộp đậy kín.', mandatory: true },
+      { id: 'pc_tt_tt', text: 'Tình trạng tủ topping', desc: 'Hệ thống làm lạnh duy trì ổn định 2°C-6°C, không đóng đá dăm trên bề mặt topping. Các khay inox nguyên vẹn, không móp méo gây hở khí; nắp đậy khít để ngăn bụi và côn trùng. Cánh tủ hít chặt, đóng mở trơn tru, không thất thoát nhiệt.', mandatory: true },
+    ]
+  },
+  {
+    id: 'pc_san_trong', title: 'Sàn Nhà Trong Quầy', icon: '🧹', mandatory: true,
+    criteria: [
+      { id: 'pc_sn_vs', text: 'Vệ sinh sàn nhà trong quầy', desc: 'Phải duy trì trạng thái sạch sẽ khi nhân viên đang rảnh tay.', mandatory: true },
+      { id: 'pc_sn_bc', text: 'Bố cục sàn nhà trong quầy', desc: 'Tuyệt đối không để bất cứ loại hàng hóa, nguyên vật liệu, thiết bị, dụng cụ trực tiếp trên mặt sàn.', mandatory: true },
+      { id: 'pc_sn_tt', text: 'Tình trạng sàn nhà trong quầy', desc: 'N/A', mandatory: false },
+    ]
+  },
+  {
+    id: 'pc_tu_mat_dung', title: 'Tủ Mát Đứng (Cửa Kính)', icon: '🧊', mandatory: true,
+    criteria: [
+      { id: 'pc_tmd_vs', text: 'Vệ sinh tủ mát đứng', desc: 'Mặt kính ngoài: Sáng trong, không dính dấu vân tay, không có vệt nước mờ, không có vệt trà/đường/syrup. Bên trong: Các giá nan sắt không bám cặn bẩn. Đáy tủ không có nước đọng các vệt trà/đường/syrup bám lâu ngày. Gioăng cửa: Gioăng cao su sạch sẽ, tuyệt đối không có chấm mốc đen. Gầm tủ: Khô ráo, không có nước rỉ chảy ra sàn nhà.', mandatory: true },
+      { id: 'pc_tmd_bc', text: 'Bố cục tủ mát đứng', desc: 'Các nguyên liệu tuân thủ quy tắc FIFO: Hàng Date cũ đẩy ra ngoài/lên trên, hàng mới cất vào trong/bên dưới. Mọi hộp/ca/túi đều phải đậy kín và dán tem Date. Các nguyên liệu được sắp xếp gọn gàng, phân khu theo từng loại.', mandatory: true },
+      { id: 'pc_tmd_tt', text: 'Tình trạng tủ mát đứng', desc: 'Cửa & Bản lề: Cửa đóng tự hít khít chặt, không bị kênh hở làm thất thoát nhiệt. Hệ thống đèn/máy: Đèn LED trong tủ sáng đều. Lốc máy kêu êm, không rung bần bật hay kêu to bất thường. Nan sắt bên trong không rỉ sét, cong gãy.', mandatory: true },
+    ]
+  },
+  {
+    id: 'pc_tu_dong', title: 'Tủ Đông Nằm', icon: '❄️', mandatory: true,
+    criteria: [
+      { id: 'pc_tdn_vs', text: 'Vệ sinh tủ đông nằm', desc: 'Thành tủ bên trong: Không bị đóng lớp tuyết/đá vôi quá dày. Phải được xả đá (defrost) định kỳ. Bề mặt ngoài: Nắp nhựa trắng hoặc nắp kính trượt bên trong sạch sẽ, không dính vết siro bẩn. Gầm tủ: Khô ráo, không có nước rỉ chảy ra sàn nhà.', mandatory: true },
+      { id: 'pc_tdn_bc', text: 'Bố cục tủ đông nằm', desc: 'Các nguyên liệu tuân thủ quy tắc FIFO: Hàng Date cũ đẩy ra ngoài/lên trên, hàng mới cất vào trong/bên dưới. Mọi hộp/ca/túi đều phải đậy kín và dán tem Date. Các nguyên liệu được sắp xếp gọn gàng, phân khu theo từng loại.', mandatory: true },
+      { id: 'pc_tdn_tt', text: 'Tình trạng tủ đông nằm', desc: 'Nhiệt độ đạt chuẩn dưới 10°C để đảm bảo nguyên liệu không bị biến chất. Nắp đậy: Bản lề nắp mở trơn tru, đứng vững khi mở nắp lên. Khóa & Gioăng: Gioăng cao su ở mép nắp nguyên vẹn, hít chặt. Bánh xe dưới chân tủ không bị kẹt cứng.', mandatory: true },
+    ]
+  },
+
+  // ===== VI. KHU VỰC KHO =====
+  {
+    id: 'kho_ke_hang', title: 'Kệ Để Hàng & Không Gian Kho', icon: '🏬', mandatory: true,
+    criteria: [
+      { id: 'kho_ke_vs', text: 'Vệ sinh kệ để hàng', desc: 'Các tầng kệ không bám bụi bẩn, mạng nhện. Lau chùi định kỳ. Sàn nhà dưới gầm kệ và phía sau lưng kệ hoàn toàn khô ráo, sạch sẽ. Tuyệt đối không có dấu vết của côn trùng/chuột.', mandatory: true },
+      { id: 'kho_ke_bc', text: 'Bố cục kệ để hàng', desc: 'Tuân thủ nguyên tắc an toàn thực phẩm: Kệ đặt cách tường ít nhất 15cm, mặt kệ thấp nhất cách sàn 15cm (để dễ quét dọn và tránh ẩm). Không để hàng hóa che lấp thiết bị phòng cháy chữa cháy, công tắc điện.', mandatory: true },
+      { id: 'kho_ke_tt', text: 'Tình trạng kệ để hàng', desc: 'Kệ sắt/inox đứng vững chắc, không rung lắc hay nghiêng ngả. Các mâm kệ không bị cong võng, lún sập do chở quá tải trọng. Lớp sơn tĩnh điện hoặc bề mặt mạ không bị bong tróc, rỉ sét.', mandatory: false },
+    ]
+  },
+  {
+    id: 'kho_khay_thung', title: 'Khay & Thùng Nhựa Đựng Nguyên Liệu', icon: '📦', mandatory: true,
+    criteria: [
+      { id: 'kho_kt_vs', text: 'Vệ sinh khay & thùng nhựa', desc: 'Lòng khay/thùng sạch sẽ. Không có vụn bột, lá trà rớt dưới đáy hay vết siro dính lem nhem. Bên ngoài khay/thùng không bám bụi hoặc rây vết bẩn từ tay nhân viên.', mandatory: true },
+      { id: 'kho_kt_bc', text: 'Bố cục khay & thùng nhựa', desc: 'Tuân thủ đúng quy chuẩn danh mục: Mỗi khay/thùng chỉ chứa 1 nhóm hàng nhất định. Các khay được dán nhãn định danh rõ ràng bên ngoài mép khay. Phân khu rõ ràng khu vực để nguyên liệu kho, khu vực để nguyên liệu bar.', mandatory: true },
+      { id: 'kho_kt_tt', text: 'Tình trạng khay & thùng nhựa', desc: 'Khay/Thùng nhựa còn nguyên vẹn, không bị nứt vỡ, thủng đáy hay rách viền nhựa gây xước tay nhân viên. Nắp đậy thùng (nếu có) phải kín, đóng mở dễ dàng.', mandatory: false },
+    ]
+  },
+  {
+    id: 'kho_hang_hoa', title: 'Hàng Hóa & Nguyên Liệu Khô', icon: '🛒', mandatory: true,
+    criteria: [
+      { id: 'kho_hh_vs', text: 'Vệ sinh hàng hóa & nguyên liệu khô', desc: 'Bề mặt bao bì nguyên liệu (can, chai, nilon, hộp) sạch sẽ, không dính bụi kho hoặc rít tay do đường. Không có nguyên liệu rơi vãi trực tiếp lên mâm kệ mà không nằm trong khay/thùng.', mandatory: true },
+      { id: 'kho_hh_bc', text: 'Bố cục hàng hóa & nguyên liệu khô', desc: 'Quy tắc FIFO (Nhập trước - Xuất trước): Hàng có Date cận hơn xếp ra ngoài, hàng Date xa xếp vào trong. Mặt nhãn mác thương hiệu và hạn sử dụng phải quay ra ngoài. Tuyệt đối không có nguyên liệu bóc dở trên kệ.', mandatory: true },
+      { id: 'kho_hh_tt', text: 'Tình trạng hàng hóa & nguyên liệu khô', desc: 'N/A', mandatory: false },
+    ]
+  },
+
+  // ===== VII. KHU VỰC BỒN RỬA =====
+  {
+    id: 'br_bon_rua', title: 'Bồn Rửa Bát & Mặt Bàn Quanh Bồn', icon: '🚰', mandatory: true,
+    criteria: [
+      { id: 'br_br_vs', text: 'Vệ sinh bồn rửa bát & mặt bàn quanh bồn', desc: 'Lòng bồn, thành bồn không bám cặn vôi, vệt ố vàng của trà hay lớp nhờn rít của sữa. Giỏ lọc rác sạch sẽ, không ứ đọng xác trà, trân châu hay thạch thừa làm tắc nghẽn. Mặt bàn quanh bồn khô ráo, không có vũng nước đọng, không có cặn bẩn bám ở các khe tiếp giáp tường.', mandatory: true },
+      { id: 'br_br_bc', text: 'Bố cục bồn rửa bát & mặt bàn quanh bồn', desc: 'Tuân thủ nguyên tắc 1 chiều: Phân định rõ khu để đồ bẩn - Khu rửa - Khu vực úp ráo nước. Tuyệt đối không ngâm dồn ứ quá nhiều dụng cụ (shaker, ca đong) trong bồn chờ rửa, phải rửa cuốn chiếu ngay sau khi qua giờ cao điểm. Giẻ rửa bát, cọ bồn phải để gọn gàng trên vỉ thoát nước, không vứt lõng bõng dưới lòng bồn.', mandatory: false },
+      { id: 'br_br_tt', text: 'Tình trạng bồn rửa bát & mặt bàn quanh bồn', desc: 'Vòi nước (cổ ngỗng/vòi xịt áp lực) không bị rò rỉ nước ở các khớp nối. Áp lực nước đủ mạnh để xả trôi cặn bẩn. Bồn inox nguyên vẹn, không móp méo, thủng hay rỉ sét. Đường ống thoát xả nước nhanh, không bị ứ nghẹn.', mandatory: true },
+    ]
+  },
+  {
+    id: 'br_ngan_tu', title: 'Ngăn Tủ Dưới Bồn (Chứa Hóa Phẩm)', icon: '🧴', mandatory: true,
+    criteria: [
+      { id: 'br_nt_vs', text: 'Vệ sinh ngăn tủ dưới bồn', desc: 'Không gian lòng tủ khô ráo, không ẩm mốc, không bốc mùi hôi hoặc mùi hóa chất nồng nặc. Không có vết hóa chất đổ tràn hay cặn bột giặt/chất tẩy rớt dưới đáy tủ. Không có sự xuất hiện của chuột, kiến, gián.', mandatory: true },
+      { id: 'br_nt_bc', text: 'Bố cục ngăn tủ dưới bồn', desc: 'Tuyệt đối cách ly: Chỉ để các loại hóa chất tẩy rửa, dụng cụ vệ sinh (bàn chải, găng tay). KHÔNG ĐƯỢC ĐỂ BẤT KỲ nguyên liệu, bao bì thực phẩm nào ở khu vực này. Các can, chai hóa chất xếp gọn gàng, hóa chất nặng để dưới, chai nhỏ để trên.', mandatory: true },
+      { id: 'br_nt_tt', text: 'Tình trạng ngăn tủ dưới bồn', desc: 'Cánh tủ đóng/mở bình thường, bản lề không bị rỉ sét do môi trường ẩm. Can/chai hóa chất nguyên vẹn, nắp vặn kín, không bị rò rỉ.', mandatory: false },
+    ]
+  },
+  {
+    id: 'br_be_loc_mo', title: 'Bể Lọc Mỡ (Grease Trap)', icon: '🛢️', mandatory: true,
+    criteria: [
+      { id: 'br_bl_vs', text: 'Vệ sinh bể lọc mỡ', desc: 'Bề mặt ngoài khô ráo, sạch sẽ, tuyệt đối không được rỉ nước ra ngoài. Kiểm soát mùi: Khu vực quanh bể tuyệt đối không được bốc mùi hôi thối, chua loét của rác thải hữu cơ phân hủy. Lưới lọc bên trong phải được vớt rác và vớt mỡ váng định kỳ (tùy công suất, có thể 1-2 lần/tuần).', mandatory: true },
+      { id: 'br_bl_bc', text: 'Bố cục bể lọc mỡ', desc: 'Bể được đặt cố định, đúng vị trí dưới đường ống xả của bồn rửa, không nằm tràn ra lối đi làm vướng chân nhân viên.', mandatory: false },
+      { id: 'br_bl_tt', text: 'Tình trạng bể lọc mỡ', desc: 'Thân bể nguyên vẹn, không bị thủng đáy hay nứt vỡ rỉ nước bẩn ra sàn. Các vách ngăn bên trong bể hoạt động đúng chức năng. Khóa nắp/kẹp nắp còn chắc chắn.', mandatory: false },
+    ]
+  },
+  {
+    id: 'br_gia_rao', title: 'Giá Để Ráo Nước CCDC (Drying Rack)', icon: '🍴', mandatory: false,
+    criteria: [
+      { id: 'br_gr_vs', text: 'Vệ sinh giá để ráo nước CCDC', desc: 'Các nan giá và bề mặt sắt không bám cặn vôi trắng hoặc vệt nước do lâu ngày không lau, không có mảng bám nhờn hay nấm mốc đen ở các khe, góc hàn. Không đọng nước vũng trên mặt kệ hay rỏ giọt lênh láng xuống sàn nhà.', mandatory: false },
+      { id: 'br_gr_bc', text: 'Bố cục giá để ráo nước CCDC', desc: 'Sắp xếp phân loại khoa học: Ca đong (jigger), shaker úp riêng; nắp đậy, muỗng khuấy để riêng. Quy tắc úp mở: Mọi CCDC (nhất là bình ủ trà sữa, bình shaker) phải được úp ngược, tạo khe hở để không khí lưu thông giúp khô tự nhiên. Tuyệt đối không úp chồng chít lên nhau khiến bên trong hấp hơi, lâu khô và sinh mùi chua.', mandatory: false },
+      { id: 'br_gr_tt', text: 'Tình trạng giá để ráo nước CCDC', desc: 'Giá úp vững chắc, chịu tải tốt, không bị cong võng khi để nồi ủ/can ủ nặng. Các mối hàn không rỉ sét, nan inox không bị gãy rụng gây mất an toàn.', mandatory: false },
+    ]
+  },
+];
+
+// ========== ZONES ==========
+const ZONES = [
+  { id: 'ngoai_quan', title: 'Ngoại Quan Cửa Hàng', icon: '🏪', color: 'var(--primary)',
+    sectionIds: ['nq_bien_hieu','nq_standee','nq_quay_ngoai','nq_san_ngoai','nq_binh_chua_chay','nq_bang_pccc','nq_quat_treo','nq_quat_san'] },
+  { id: 'quy_thu_ngan', title: 'Quầy Thu Ngân', icon: '🖥️', color: '#43a047',
+    sectionIds: ['qtn_pos','qtn_ngan'] },
+  { id: 'tra_do', title: 'Khu Vực Trả Đồ', icon: '🛍️', color: '#e53935',
+    sectionIds: ['td_be_mat','td_may_dap','td_ong_khay','td_ngan_ban'] },
+  { id: 'nau_do', title: 'Khu Vực Nấu Đồ', icon: '🔥', color: '#f57c00',
+    sectionIds: ['kn_mat_inox','kn_ngan_nl','kn_ngan_ccdc'] },
+  { id: 'pha_che', title: 'Khu Vực Pha Chế', icon: '☕', color: '#8e24aa',
+    sectionIds: ['pc_may_moc','pc_ban_mat','pc_tu_mat','pc_ke_binh','pc_tu_topping','pc_san_trong','pc_tu_mat_dung','pc_tu_dong'] },
+  { id: 'khu_vuc_kho', title: 'Khu Vực Kho', icon: '🏬', color: '#00838f',
+    sectionIds: ['kho_ke_hang','kho_khay_thung','kho_hang_hoa'] },
+  { id: 'bon_rua', title: 'Khu Vực Bồn Rửa', icon: '🚰', color: '#3949ab',
+    sectionIds: ['br_bon_rua','br_ngan_tu','br_be_loc_mo','br_gia_rao'] },
+];
+
+let currentZoneId = null;
+
+// ========== SCORING STATE ==========
+const state = {};
+
+function initState() {
+  SECTIONS.forEach(s => s.criteria.forEach(c => {
+    state[c.id] = state[c.id] || { result: null, note: '', photos: [] };
+  }));
+}
+
+// ========== RESULTS STORE ==========
+// Ảnh đã upload Drive → lưu Drive URL vào localStorage (ngắn ~80 chars, không tốn quota)
+// Ảnh chưa upload (base64) → chỉ lưu trong memory, mất sau reload
+const LS_KEY = 'qc_saved_results_v4';
+
+function loadResults() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+// Chỉ lưu Drive URL vào localStorage, bỏ base64
+function persistResults() {
+  const slim = savedResults.map(r => {
+    const slimState = {};
+    Object.keys(r.state).forEach(k => {
+      const photos = (r.state[k].photos || [])
+        .filter(p => p && p.driveUrl)   // chỉ giữ ảnh đã lên Drive
+        .map(p => ({ name: p.name, driveUrl: p.driveUrl }));
+      slimState[k] = { result: r.state[k].result, note: r.state[k].note, photos };
+    });
+    return { ...r, state: slimState };
+  });
+  try { localStorage.setItem(LS_KEY, JSON.stringify(slim)); } catch(e) {
+    console.warn('localStorage lỗi:', e);
+  }
+}
+
+let savedResults = loadResults();
+
+// ========== GOOGLE SHEET API ==========
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzFIj4K8-NOJlhsIvbRbtovURnSH3Vr6EEy1Tq98isMAr7q6ejJ0mabSXFlXqhdxXHU/exec';
+
+// ⚠ Thay bằng OAuth Client ID của bạn (xem hướng dẫn tạo trong file HUONG_DAN_OAUTH.md)
+const GOOGLE_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com';
+
+// Danh sách cửa hàng (dùng cho form chấm điểm & phân quyền tài khoản)
+const STORE_LIST = [
+  'Mongo 353 Trương Định', 'Mongo 345 Bạch Mai', 'Mongo 15 Ngõ Gốc Đề', 'Mongo 97A Khâm Thiên',
+  'Mongo 448 Trần Cung', 'Mongo 110 Khương Trung', 'Mongo 106 Triều Khúc', 'Mongo 211 Lương Thế Vinh'
+];
+
+function getWebhookUrl() {
+  return SHEET_URL;
+}
+
+function setSheetStatus(cls, text) {
+  const el = document.getElementById('sheetStatus');
+  if (!el) return;
+  el.className = 'sheet-status ' + cls;
+  el.textContent = text;
+}
+
+// Gọi GET với params
+async function sheetGet(baseUrl, params) {
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  const res = await fetch(`${baseUrl}?${qs}`);
+  return res.json();
+}
+
+// Gọi POST với JSON body, tự động kèm idToken của người dùng đang đăng nhập
+async function sheetPost(payload) {
+  const url = getWebhookUrl();
+  if (!url) return { skipped: true };
+  const body = Object.assign({ idToken: currentUser ? currentUser.idToken : '' }, payload);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // tránh preflight CORS
+    body: JSON.stringify(body),
+    redirect: 'follow',
+  });
+  return res.json();
+}
+
+// Gửi dữ liệu lên Sheet (POST JSON)
+async function sendToSheet(record) {
+  const url = getWebhookUrl();
+  if (!url) return { skipped: true };
+  return sheetPost({ action: 'write', data: makeSlimForSheet(record) });
+}
+
+// Đọc tất cả kết quả từ Sheet
+// Đồng bộ từ Sheet — Sheet là nguồn chính (ghi đè local)
+async function syncFromSheet(silent = false) {
+  const url = getWebhookUrl();
+  if (!url) {
+    if (!silent) alert('Chưa cấu hình Google Sheet URL.');
+    return;
+  }
+  const btn = document.getElementById('btnSync');
+  if (btn) { btn.textContent = '⏳ Đang tải...'; btn.disabled = true; }
+  setSheetStatus('loading', '⏳ Đang tải dữ liệu...');
+  // Hiện loading trên tab kết quả
+  const loadingEl = document.getElementById('resultsLoading');
+  const emptyEl = document.getElementById('resultsEmpty');
+  const gridEl = document.getElementById('resultsGrid');
+  if (loadingEl) loadingEl.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (gridEl) gridEl.innerHTML = '';
+  try {
+    const params = { action: 'read' };
+    if (currentUser && currentUser.idToken) params.idToken = currentUser.idToken;
+    const res = await sheetGet(url, params);
+    if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
+    const remote = res.records || [];
+    // Sheet là nguồn chính — ghi đè hoàn toàn
+    savedResults = remote;
+    savedResults.sort((a, b) => b.id - a.id);
+    persistResults();
+    updateBadge();
+    renderResultsTab();
+    setSheetStatus('connected', `✅ Đã tải ${remote.length} kết quả`);
+    if (!silent) alert(`✅ Đã tải ${remote.length} kết quả từ Google Sheet!`);
+  } catch(e) {
+    setSheetStatus('error', '❌ Lỗi tải dữ liệu');
+    if (!silent) alert('❌ Không thể tải dữ liệu từ Sheet:\n' + e.message);
+    else setSheetStatus('error', '❌ ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '🔄 Đồng bộ từ Sheet'; btn.disabled = false; }
+    if (loadingEl) loadingEl.style.display = 'none';
+  }
+}
+
+// Xóa kết quả trên Sheet
+async function deleteFromSheet(id) {
+  const url = getWebhookUrl();
+  if (!url) return;
+  try {
+    await sheetPost({ action: 'delete', id: String(id) });
+  } catch(e) { /* silent */ }
+}
+
+// Tạo bản slim để gửi lên Sheet (giữ Drive URL, bỏ base64)
+function makeSlimForSheet(r) {
+  const slim = {
+    id: r.id, storeName: r.storeName, inspector: r.inspector,
+    inspDate: r.inspDate, savedAt: r.savedAt,
+    totalPoints: r.totalPoints, earnedPoints: r.earnedPoints,
+    mandatoryFails: r.mandatoryFails, pct: r.pct, state: {}
+  };
+  Object.keys(r.state || {}).forEach(k => {
+    const photos = (r.state[k].photos || [])
+      .filter(p => p && p.driveUrl)
+      .map(p => ({ name: p.name, driveUrl: p.driveUrl }));
+    slim.state[k] = { result: r.state[k].result, note: r.state[k].note || '', photos };
+  });
+  return slim;
+}
+
+// ========== AUTH (Google Identity Services) ==========
+let currentUser = null; // { email, name, picture, role, stores, idToken }
+
+const ROLE_LABELS = {
+  admin: 'Quản trị viên',
+  qc: 'Chuyên viên QC',
+  area: 'Quản lý khu vực',
+  store: 'Cửa hàng'
+};
+
+// Giải mã phần payload của JWT (không xác thực chữ ký — chỉ dùng để đọc thời hạn idToken)
+function decodeJwt(token) {
+  const payload = token.split('.')[1];
+  const json = decodeURIComponent(
+    atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+      .split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+  );
+  return JSON.parse(json);
+}
+
+// Hiện 1 trong 3 màn hình auth (authLoading / authLogin / authDenied), hoặc null để hiện app chính
+function showAuthScreen(id) {
+  ['authLoading', 'authLogin', 'authDenied'].forEach(s => {
+    document.getElementById(s).style.display = (s === id) ? 'flex' : 'none';
+  });
+  document.getElementById('appLayout').classList.toggle('ready', id === null);
+}
+
+async function initAuth() {
+  showAuthScreen('authLoading');
+  const saved = sessionStorage.getItem('qc_idtoken');
+  if (saved) {
+    try {
+      const payload = decodeJwt(saved);
+      if (payload.exp * 1000 > Date.now()) {
+        await checkAuthWithToken(saved);
+        return;
+      }
+    } catch (e) { /* token hỏng — đăng nhập lại */ }
+    sessionStorage.removeItem('qc_idtoken');
+  }
+  showAuthScreen('authLogin');
+  setupGoogleSignIn();
+}
+
+function setupGoogleSignIn() {
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    setTimeout(setupGoogleSignIn, 300); // Thư viện Google chưa tải xong
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+  });
+  const btnEl = document.getElementById('gSignInBtn');
+  btnEl.innerHTML = '';
+  google.accounts.id.renderButton(btnEl, {
+    theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'vi'
+  });
+}
+
+async function handleCredentialResponse(response) {
+  await checkAuthWithToken(response.credential);
+}
+
+async function checkAuthWithToken(idToken) {
+  showAuthScreen('authLoading');
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+  try {
+    const res = await sheetPost({ action: 'checkauth', idToken });
+    if (res.status !== 'ok') throw new Error(res.message || 'Lỗi xác thực');
+    const u = res.user;
+    if (!u.role) {
+      sessionStorage.setItem('qc_idtoken', idToken);
+      document.getElementById('deniedEmail').textContent = u.email;
+      document.getElementById('deniedPic').src = u.picture || '';
+      showAuthScreen('authDenied');
+      return;
+    }
+    currentUser = Object.assign({}, u, { idToken });
+    sessionStorage.setItem('qc_idtoken', idToken);
+    applyRoleUI();
+    showAuthScreen(null);
+    startApp();
+    if (u.bootstrap) {
+      setTimeout(() => alert('🎉 Bạn là người đăng nhập đầu tiên và đã được tự động cấp quyền Quản trị viên!\nVào "Quản Lý Tài Khoản" để cấp quyền cho các tài khoản khác.'), 400);
+    }
+  } catch (e) {
+    sessionStorage.removeItem('qc_idtoken');
+    showAuthScreen('authLogin');
+    errEl.style.display = 'block';
+    errEl.textContent = '❌ ' + e.message;
+    setupGoogleSignIn();
+  }
+}
+
+function authLogout() {
+  sessionStorage.removeItem('qc_idtoken');
+  currentUser = null;
+  if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+  showAuthScreen('authLogin');
+  setupGoogleSignIn();
+}
+
+// Vai trò "Quản lý khu vực" / "Cửa hàng" — chỉ xem, không chỉnh sửa/xóa
+function isViewOnly() {
+  return currentUser && (currentUser.role === 'area' || currentUser.role === 'store');
+}
+
+// Ẩn/hiện sidebar & tab theo vai trò của người đăng nhập
+function applyRoleUI() {
+  const role = currentUser.role;
+
+  document.getElementById('sidebarUser').style.display = 'flex';
+  document.getElementById('sidebarUserPic').src = currentUser.picture || '';
+  document.getElementById('sidebarUserName').textContent = currentUser.name || currentUser.email;
+  let roleText = ROLE_LABELS[role] || role;
+  if ((role === 'area' || role === 'store') && currentUser.stores && currentUser.stores.length) {
+    roleText += ' · ' + currentUser.stores.join(', ');
+  }
+  document.getElementById('sidebarUserRole').textContent = roleText;
+  document.getElementById('sidebarUserRole').title = roleText;
+  document.getElementById('sidebarLogoutBtn').onclick = authLogout;
+
+  // Chỉ admin mới thấy mục "Quản Lý Tài Khoản"
+  document.getElementById('adminSection').style.display = (role === 'admin') ? '' : 'none';
+
+  // "Quản lý khu vực" / "Cửa hàng" chỉ xem Kết Quả, không chấm điểm
+  const scoringTab = document.getElementById('tab-scoring');
+  if (role === 'area' || role === 'store') {
+    scoringTab.style.display = 'none';
+  } else {
+    scoringTab.style.display = '';
+  }
+}
+
+function startApp() {
+  if (window.__appStarted) return;
+  window.__appStarted = true;
+
+  initState();
+  render();
+  document.getElementById('inspectDate').value = new Date().toISOString().slice(0,10);
+  updateBadge();
+
+  if (currentUser.role === 'area' || currentUser.role === 'store') {
+    switchTab('results');
+  }
+
+  // Tự động tải dữ liệu từ Sheet khi load (thay thế localStorage)
+  setSheetStatus('loading', '⏳ Đang tải kết quả...');
+  syncFromSheet(true); // silent = true, không hiện alert
+
+  // Tự động báo chiều cao trang cho khung nhúng (Google Sites iframe)
+  setupAutoResize();
+}
+
+// ========== USER MANAGEMENT (chỉ admin) ==========
+let usersList = [];
+
+async function loadUsers() {
+  try {
+    const res = await sheetPost({ action: 'listusers' });
+    if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
+    usersList = res.users || [];
+  } catch (e) {
+    alert('❌ Không thể tải danh sách tài khoản:\n' + e.message);
+    usersList = [];
+  }
+}
+
+async function renderUsersTab() {
+  const tbody = document.getElementById('usersTableBody');
+  const empty = document.getElementById('usersEmpty');
+  const count = document.getElementById('usersCount');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:18px;">⏳ Đang tải...</td></tr>';
+  empty.style.display = 'none';
+
+  await loadUsers();
+
+  if (usersList.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    count.textContent = '';
+    return;
+  }
+  count.textContent = ` — ${usersList.length} tài khoản`;
+  tbody.innerHTML = usersList.map(u => {
+    const stores = u.stores || [];
+    const storesHtml = (u.role === 'area' || u.role === 'store')
+      ? (stores.length ? `<div class="store-tags">${stores.map(s => `<span class="store-tag">${s}</span>`).join('')}</div>` : '<span style="color:#ccc;">— chưa gán cửa hàng —</span>')
+      : '<span style="color:#ccc;">Tất cả cửa hàng</span>';
+    return `
+    <tr>
+      <td>${u.email}</td>
+      <td>${u.name || '<span style="color:#ccc;">—</span>'}</td>
+      <td><span class="role-pill role-${u.role}">${ROLE_LABELS[u.role] || u.role}</span></td>
+      <td>${storesHtml}</td>
+      <td class="user-actions">
+        <button title="Sửa" onclick='editUser("${u.email}")'>✏️</button>
+        <button title="Xóa" onclick='deleteUserAccount("${u.email}")'>🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function buildStoreChecklist(selected) {
+  const wrap = document.getElementById('userFormStores');
+  wrap.innerHTML = STORE_LIST.map(s =>
+    `<label><input type="checkbox" value="${s}" ${selected.includes(s) ? 'checked' : ''}> ${s}</label>`
+  ).join('');
+}
+
+function onUserFormRoleChange() {
+  const role = document.getElementById('userFormRole').value;
+  document.getElementById('userFormStoresWrap').style.display = (role === 'area' || role === 'store') ? '' : 'none';
+}
+
+function openUserForm(user) {
+  document.getElementById('userFormEmail').value = user ? user.email : '';
+  document.getElementById('userFormEmail').disabled = !!user;
+  document.getElementById('userFormName').value = user ? (user.name || '') : '';
+  document.getElementById('userFormRole').value = user ? user.role : 'qc';
+  buildStoreChecklist(user ? (user.stores || []) : []);
+  onUserFormRoleChange();
+  const box = document.getElementById('userFormBox');
+  box.style.display = 'grid';
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function closeUserForm() {
+  document.getElementById('userFormBox').style.display = 'none';
+}
+
+function editUser(email) {
+  const u = usersList.find(x => x.email === email);
+  if (u) openUserForm(u);
+}
+
+async function saveUserForm() {
+  const email = document.getElementById('userFormEmail').value.trim().toLowerCase();
+  const name = document.getElementById('userFormName').value.trim();
+  const role = document.getElementById('userFormRole').value;
+  if (!email || !email.includes('@')) { alert('⚠ Vui lòng nhập email Gmail hợp lệ.'); return; }
+
+  let stores = [];
+  if (role === 'area' || role === 'store') {
+    stores = Array.from(document.querySelectorAll('#userFormStores input:checked')).map(c => c.value);
+    if (stores.length === 0) { alert('⚠ Vui lòng chọn ít nhất 1 cửa hàng.'); return; }
+  }
+  if (email === currentUser.email && role !== 'admin') {
+    if (!confirm('⚠ Bạn đang đổi vai trò của chính tài khoản mình sang vai trò không phải Quản trị viên.\nBạn có thể mất quyền truy cập trang Quản Lý Tài Khoản. Tiếp tục?')) return;
+  }
+  try {
+    const res = await sheetPost({ action: 'saveuser', email, role, stores, name });
+    if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
+    closeUserForm();
+    renderUsersTab();
+  } catch (e) {
+    alert('❌ Lỗi lưu tài khoản:\n' + e.message);
+  }
+}
+
+async function deleteUserAccount(email) {
+  if (email === currentUser.email) { alert('⚠ Bạn không thể tự xóa quyền của chính mình.'); return; }
+  if (!confirm(`Xóa quyền truy cập của "${email}"?`)) return;
+  try {
+    const res = await sheetPost({ action: 'deleteuser', email });
+    if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
+    renderUsersTab();
+  } catch (e) {
+    alert('❌ Lỗi xóa tài khoản:\n' + e.message);
+  }
+}
+
+// ========== TAB SWITCHING ==========
+const TAB_HEADERS = {
+  scoring: ['📝 Chấm Điểm', 'Tiêu chuẩn QC — 5 khu vực · 16 hạng mục · 48 tiêu chí · Phiên bản v2.0 (06/2026)'],
+  results: ['📊 Kết Quả', 'Danh sách các kết quả kiểm tra đã lưu'],
+  users: ['👥 Quản Lý Tài Khoản', 'Cấp quyền đăng nhập & truy cập cho các tài khoản Google']
+};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  const h = TAB_HEADERS[tab];
+  if (h) {
+    document.getElementById('pageTitle').textContent = h[0];
+    document.getElementById('pageSubtitle').textContent = h[1];
+  }
+  if (tab === 'results') renderResultsTab();
+  if (tab === 'users') renderUsersTab();
+  closeSidebar();
+  scrollToTopAll();
+}
+
+// ========== SIDEBAR (mobile) ==========
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ========== ZONE NAVIGATION ==========
+function showZonePicker() {
+  currentZoneId = null;
+  document.getElementById('zonePickerView').style.display = '';
+  document.getElementById('zoneSectionsView').style.display = 'none';
+  renderZoneCards();
+  updateScore();
+}
+
+function openZone(zoneId) {
+  currentZoneId = zoneId;
+  const zone = ZONES.find(z => z.id === zoneId);
+  document.getElementById('zonePickerView').style.display = 'none';
+  document.getElementById('zoneSectionsView').style.display = '';
+  document.getElementById('breadcrumbIcon').textContent = zone.icon;
+  document.getElementById('breadcrumbTitle').textContent = zone.title;
+
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+  const zoneSections = SECTIONS.filter(s => zone.sectionIds.includes(s.id));
+  zoneSections.forEach(section => container.appendChild(renderSection(section)));
+
+  // Restore radio state for criteria in this zone
+  zoneSections.forEach(section => {
+    section.criteria.forEach(c => {
+      const r = state[c.id]?.result;
+      if (r) {
+        const lbl = document.getElementById(`lbl_${r}_${c.id}`);
+        if (lbl) lbl.classList.add(`selected-${r}`);
+        const cEl = document.getElementById('criterion_' + c.id);
+        if (cEl) cEl.classList.add(r);
+      }
+      // Restore photos
+      const photos = state[c.id]?.photos || [];
+      if (photos.length) {
+        const thumbsEl = document.getElementById('thumbs_' + c.id);
+        if (thumbsEl) {
+          photos.forEach((p, i) => {
+            if (!p || !p.data) return;
+            const div = document.createElement('div');
+            div.className = 'photo-thumb';
+            div.innerHTML = `<img src="${p.data}" alt="${p.name}"><button class="del-btn" onclick="removePhoto('${c.id}',${i})">✕</button>`;
+            thumbsEl.appendChild(div);
+          });
+        }
+      }
+    });
+  });
+  updateScore();
+}
+
+function renderZoneCards() {
+  const grid = document.getElementById('zoneGrid');
+  grid.innerHTML = '';
+  ZONES.forEach(zone => {
+    const zoneSections = SECTIONS.filter(s => zone.sectionIds.includes(s.id));
+    const allCriteria = zoneSections.flatMap(s => s.criteria);
+    const total = allCriteria.length;
+    const done = allCriteria.filter(c => state[c.id]?.result && state[c.id].result !== null).length;
+    const fails = allCriteria.filter(c => state[c.id]?.result === 'fail').length;
+
+    let statusClass = '';
+    let statusText = `${done}/${total} tiêu chí`;
+    if (done === total) { statusClass = 'done'; statusText = '✅ Hoàn thành'; }
+    else if (done > 0)  { statusClass = 'partial'; }
+
+    const card = document.createElement('div');
+    card.className = `zone-card ${statusClass}`;
+    card.onclick = () => openZone(zone.id);
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="font-size:2.2rem;line-height:1;">${zone.icon}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:1rem;color:#333;margin-bottom:4px;">${zone.title}</div>
+          <div style="font-size:0.82rem;color:#888;">${statusText}</div>
+          ${fails > 0 ? `<div style="font-size:0.8rem;color:#e53935;margin-top:2px;">⚠ ${fails} không đạt</div>` : ''}
+        </div>
+        <div style="color:#bbb;font-size:1.2rem;">›</div>
+      </div>
+      <div style="margin-top:12px;height:5px;background:#f0f0f0;border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${total ? Math.round(done/total*100) : 0}%;background:${done===total?'#43a047':'var(--primary)'};border-radius:3px;transition:width 0.3s;"></div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ========== RENDER SCORING ==========
+function render() {
+  showZonePicker();
+}
+
+function renderSection(section) {
+  const el = document.createElement('div');
+  el.className = 'section';
+  el.id = 'section_' + section.id;
+  const mandatoryBadge = section.mandatory
+    ? '<span class="section-badge">⚠ Bắt buộc</span>'
+    : '<span class="section-badge basic">✔ Cơ bản</span>';
+  el.innerHTML = `
+    <div class="section-header ${section.mandatory ? 'mandatory' : ''}" onclick="toggleSection('${section.id}')">
+      <div class="section-header-left">
+        <span class="section-icon">${section.icon}</span>
+        <span class="section-title">${section.title}</span>
+        ${mandatoryBadge}
+      </div>
+      <div class="section-score-pill">
+        <span class="pill" id="pill_${section.id}">—</span>
+        <span class="section-toggle" id="toggle_${section.id}">▼</span>
+      </div>
+    </div>
+    <div class="section-body open" id="body_${section.id}">
+      ${section.criteria.map(c => renderCriterion(c)).join('')}
+    </div>`;
+  return el;
+}
+
+function renderCriterion(c) {
+  return `
+  <div class="criterion" id="criterion_${c.id}">
+    <div class="criterion-top">
+      <div class="criterion-text">
+        <strong onclick="openCritPopup('${c.id}')">${c.text}</strong>
+        ${c.mandatory ? '<span class="mandatory-tag">⚠ Bắt buộc</span>' : ''}
+      </div>
+      <div class="criterion-controls">
+        <div class="radio-group">
+          <label class="pass-lbl" id="lbl_pass_${c.id}" onclick="setResult('${c.id}','pass')">
+            <input type="radio" name="r_${c.id}" value="pass"><span>✓ Đạt</span>
+          </label>
+          <label class="fail-lbl" id="lbl_fail_${c.id}" onclick="setResult('${c.id}','fail')">
+            <input type="radio" name="r_${c.id}" value="fail"><span>✗ Không đạt</span>
+          </label>
+          <label class="na-lbl" id="lbl_na_${c.id}" onclick="setResult('${c.id}','na')">
+            <input type="radio" name="r_${c.id}" value="na"><span>— N/A</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="criterion-notes">
+      <textarea placeholder="Ghi chú vấn đề, chi tiết lỗi..."
+        oninput="setNote('${c.id}', this.value)">${state[c.id]?.note || ''}</textarea>
+    </div>
+    <div class="photo-area">
+      <label class="photo-upload-btn">
+        <input type="file" accept="image/*" multiple onchange="addPhotos('${c.id}', this)">
+        📷 Tải ảnh lên
+      </label>
+      <div class="photo-thumbs" id="thumbs_${c.id}"></div>
+    </div>
+  </div>`;
+}
+
+// ========== INTERACTIONS ==========
+function toggleSection(id) {
+  const body = document.getElementById('body_' + id);
+  const toggle = document.getElementById('toggle_' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  toggle.classList.toggle('open', !isOpen);
+}
+
+function setResult(criterionId, result) {
+  state[criterionId].result = result;
+  ['pass','fail','na'].forEach(r => {
+    document.getElementById(`lbl_${r}_${criterionId}`).classList.remove('selected-pass','selected-fail','selected-na');
+  });
+  document.getElementById(`lbl_${result}_${criterionId}`).classList.add(`selected-${result}`);
+  const cEl = document.getElementById('criterion_' + criterionId);
+  cEl.classList.remove('pass','fail','na');
+  cEl.classList.add(result);
+  updateScore();
+}
+
+function setNote(criterionId, val) { state[criterionId].note = val; }
+
+function addPhotos(criterionId, input) {
+  const files = Array.from(input.files);
+  const thumbsEl = document.getElementById('thumbs_' + criterionId);
+
+  files.forEach(file => {
+    const idx = state[criterionId].photos.length;
+    // Placeholder loading
+    state[criterionId].photos.push({ name: file.name, data: null, uploading: true });
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.id = `thumb_${criterionId}_${idx}`;
+    div.innerHTML = `<div style="width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--primary-soft);border-radius:8px;">⏳</div>`;
+    thumbsEl.appendChild(div);
+
+    // Đọc file → nén → hiển thị ngay (base64) → upload Drive
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const base64 = await compressImage(e.target.result, file.type);
+      // Lưu base64 vào memory để hiển thị tạm trong phiên này
+      state[criterionId].photos[idx] = { name: file.name, data: base64, driveUrl: null };
+      div.innerHTML = `<img src="${base64}" alt="${file.name}"><button class="del-btn" onclick="removePhoto('${criterionId}',${idx})">✕</button>`;
+      // Upload lên Drive — đánh dấu đang upload
+      state[criterionId].photos[idx].uploading = true;
+      div.querySelector('img').style.opacity = '0.5';
+      const uploadLabel = document.createElement('div');
+      uploadLabel.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;text-align:center;padding:2px;';
+      uploadLabel.textContent = '⬆ Đang tải...';
+      div.appendChild(uploadLabel);
+      try {
+        const json = await sheetPost({ action: 'uploadPhoto', base64, filename: file.name, mimeType: file.type });
+        if (json.status === 'ok') {
+          state[criterionId].photos[idx].driveUrl = json.url;
+          state[criterionId].photos[idx].uploading = false;
+          div.querySelector('img').style.opacity = '1';
+          uploadLabel.style.background = 'rgba(0,128,0,0.7)';
+          uploadLabel.textContent = '✓ Drive';
+          debugLog('Upload OK: ' + json.url);
+        } else {
+          state[criterionId].photos[idx].uploading = false;
+          uploadLabel.style.background = 'rgba(200,0,0,0.7)';
+          uploadLabel.textContent = '✗ Lỗi';
+          debugLog('Upload thất bại: ' + json.message);
+        }
+      } catch(err) {
+        state[criterionId].photos[idx].uploading = false;
+        uploadLabel.style.background = 'rgba(200,0,0,0.7)';
+        uploadLabel.textContent = '✗ Lỗi mạng';
+        debugLog('Upload lỗi: ' + err.message);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+// Nén ảnh bằng canvas trước khi upload (giảm dung lượng)
+function compressImage(dataUrl, mimeType) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200; // px
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL(mimeType || 'image/jpeg', 0.82));
+    };
+    img.src = dataUrl;
+  });
+}
+
+function removePhoto(criterionId, idx) {
+  state[criterionId].photos.splice(idx, 1);
+  const thumbsEl = document.getElementById('thumbs_' + criterionId);
+  thumbsEl.innerHTML = '';
+  state[criterionId].photos.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = `<img src="${p.data}" alt="${p.name}"><button class="del-btn" onclick="removePhoto('${criterionId}',${i})">✕</button>`;
+    thumbsEl.appendChild(div);
+  });
+}
+
+// ========== SCORE ==========
+function calcScore() {
+  let totalPoints = 0, earnedPoints = 0, mandatoryFails = 0;
+  SECTIONS.forEach(section => {
+    section.criteria.forEach(c => {
+      const r = state[c.id].result;
+      if (r === 'na') return;
+      totalPoints++;
+      if (r === 'pass') earnedPoints++;
+      if (r === 'fail' && c.mandatory) mandatoryFails++;
+    });
+  });
+  return { totalPoints, earnedPoints, mandatoryFails };
+}
+
+function updateScore() {
+  const { totalPoints, earnedPoints, mandatoryFails } = calcScore();
+  const pct = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+  SECTIONS.forEach(section => {
+    let secTotal = 0, secEarned = 0;
+    section.criteria.forEach(c => {
+      const r = state[c.id].result;
+      if (r === 'na') return;
+      secTotal++;
+      if (r === 'pass') secEarned++;
+    });
+    const pill = document.getElementById('pill_' + section.id);
+    if (!pill) return;
+    if (secTotal === 0) { pill.textContent = '—'; pill.className = 'pill'; }
+    else { pill.textContent = `${secEarned}/${secTotal}`; pill.className = 'pill ' + (secEarned === secTotal ? 'full' : secEarned === 0 ? 'zero' : 'partial'); }
+  });
+
+  document.getElementById('scoreNum').textContent = earnedPoints;
+  document.getElementById('scoreMax').textContent = `/ ${totalPoints}`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('scorePct').textContent = pct + '%';
+  document.getElementById('mandatoryFail').textContent = mandatoryFails + ' lỗi';
+
+  const circle = document.getElementById('scoreCircle');
+  const statusEl = document.getElementById('scoreStatus');
+  const labelEl = document.getElementById('scoreLabel');
+
+  if (totalPoints === 0) {
+    circle.style.borderColor = '#e0e4f0'; statusEl.textContent = ''; labelEl.textContent = 'Chưa chấm điểm';
+  } else if (mandatoryFails > 0) {
+    circle.style.borderColor = '#e53935'; statusEl.className = 'score-status status-fail'; statusEl.textContent = '❌ Không đạt'; labelEl.textContent = `Có ${mandatoryFails} tiêu chí bắt buộc bị lỗi`;
+  } else if (pct >= 90) {
+    circle.style.borderColor = '#43a047'; statusEl.className = 'score-status status-pass'; statusEl.textContent = '✅ Đạt xuất sắc'; labelEl.textContent = 'Cửa hàng đạt tiêu chuẩn xuất sắc';
+  } else if (pct >= 75) {
+    circle.style.borderColor = '#43a047'; statusEl.className = 'score-status status-pass'; statusEl.textContent = '✅ Đạt'; labelEl.textContent = 'Cửa hàng đạt tiêu chuẩn vận hành';
+  } else {
+    circle.style.borderColor = '#ffa726'; statusEl.className = 'score-status status-warn'; statusEl.textContent = '⚠ Cần cải thiện'; labelEl.textContent = 'Cửa hàng cần khắc phục các điểm chưa đạt';
+  }
+}
+
+// ========== SAVE RESULT ==========
+async function saveResult() {
+  const storeName = document.getElementById('storeName').value.trim();
+  const inspector = document.getElementById('inspector').value.trim();
+  const inspDate  = document.getElementById('inspectDate').value;
+
+  if (!storeName) { alert('Vui lòng nhập tên cửa hàng trước khi lưu.'); document.getElementById('storeName').focus(); return; }
+
+  // Kiểm tra còn ảnh đang upload không
+  const stillUploading = SECTIONS.some(s => s.criteria.some(c =>
+    (state[c.id].photos || []).some(p => p.uploading)
+  ));
+  if (stillUploading) {
+    alert('⏳ Vẫn còn ảnh đang tải lên Drive, vui lòng đợi một chút rồi lưu lại.');
+    return;
+  }
+
+  const { totalPoints, earnedPoints, mandatoryFails } = calcScore();
+  const pct = totalPoints > 0 ? Math.round(earnedPoints / totalPoints * 100) : 0;
+
+  // Nếu đang chỉnh sửa một kết quả đã lưu, giữ nguyên ID cũ (ghi đè thay vì tạo mới)
+  const editingId = window.editingResultId || null;
+  const resultId = editingId || Date.now();
+
+  // Deep-copy state với photos (giữ cả base64 data cho phiên hiện tại + driveUrl để persist)
+  const resultState = {};
+  SECTIONS.forEach(s => s.criteria.forEach(c => {
+    const photos = (state[c.id].photos || []).map(p => ({
+      name: p.name,
+      data: p.data,       // base64 — chỉ dùng trong phiên, persistResults sẽ bỏ đi
+      driveUrl: p.driveUrl || null,
+    }));
+    resultState[c.id] = { result: state[c.id].result, note: state[c.id].note, photos };
+  }));
+
+  const record = {
+    id: resultId,
+    storeName, inspector, inspDate,
+    savedAt: new Date().toISOString(),
+    totalPoints, earnedPoints, mandatoryFails, pct,
+    state: resultState,
+  };
+
+  // Lưu local trước
+  if (editingId) {
+    const idx = savedResults.findIndex(r => String(r.id) === String(editingId));
+    if (idx >= 0) savedResults[idx] = record;
+    else savedResults.unshift(record);
+  } else {
+    savedResults.unshift(record);
+  }
+  persistResults();
+  updateBadge();
+  switchTab('results');
+  setTimeout(() => showDetail(record.id), 100);
+  window.editingResultId = null;
+
+  // Gửi lên Sheet (không chặn UI)
+  const url = getWebhookUrl();
+  if (url) {
+    setSheetStatus('sending', '⏳ Đang gửi...');
+    try {
+      const res = await sendToSheet(record);
+      if (res && res.status === 'ok') {
+        setSheetStatus('connected', '✅ Đã lưu lên Sheet');
+        alert(`✅ Đã lưu kết quả "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n📊 Đã ghi vào Google Sheet!`);
+      } else {
+        setSheetStatus('error', '⚠ Lưu Sheet thất bại');
+        alert(`✅ Đã lưu cục bộ "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n⚠ Không gửi được lên Sheet (đã lưu local).`);
+      }
+    } catch(e) {
+      setSheetStatus('error', '⚠ Lỗi kết nối Sheet');
+      alert(`✅ Đã lưu cục bộ "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n⚠ Không gửi được lên Sheet: ${e.message}`);
+    }
+  } else {
+    alert(`✅ Đã lưu kết quả "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n💡 Tip: Cấu hình Google Sheet URL để đồng bộ với mọi người.`);
+  }
+}
+
+function updateBadge() {
+  const badge = document.getElementById('resultsBadge');
+  badge.textContent = savedResults.length;
+  badge.style.display = savedResults.length > 0 ? 'inline-flex' : 'none';
+}
+
+// ========== RESULTS TAB ==========
+let selectedResultId = null;
+
+function renderResultsTab() {
+  const grid = document.getElementById('resultsGrid');
+  const empty = document.getElementById('resultsEmpty');
+  const count = document.getElementById('resultsCount');
+
+  const clearBtn = document.getElementById('btnClearAll');
+  if (clearBtn) clearBtn.style.display = isViewOnly() ? 'none' : '';
+
+  if (savedResults.length === 0) {
+    empty.style.display = 'block';
+    grid.style.display = 'none';
+    document.getElementById('detailPanel').style.display = 'none';
+    count.textContent = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+  count.textContent = ` — ${savedResults.length} lần kiểm tra`;
+
+  grid.innerHTML = savedResults.map(r => {
+    let badgeClass, badgeText, barColor;
+    if (r.mandatoryFails > 0)   { badgeClass='badge-fail'; badgeText='❌ Không đạt'; barColor='#e53935'; }
+    else if (r.pct >= 90)       { badgeClass='badge-pass'; badgeText='✅ Xuất sắc';  barColor='#43a047'; }
+    else if (r.pct >= 75)       { badgeClass='badge-pass'; badgeText='✅ Đạt';       barColor='#43a047'; }
+    else                        { badgeClass='badge-warn'; badgeText='⚠ Cần cải thiện'; barColor='#ffa726'; }
+
+    const dateStr = r.inspDate ? new Date(r.inspDate).toLocaleDateString('vi-VN') : '—';
+    const isSelected = String(r.id) === String(selectedResultId);
+
+    return `
+    <div class="result-card ${isSelected ? 'selected' : ''}" onclick="showDetail(${r.id})">
+      <div class="result-card-top">
+        <button class="result-card-menu-btn" onclick="event.stopPropagation();toggleResultMenu(event, ${r.id})">⋮</button>
+        <div class="result-card-menu" id="resultMenu_${r.id}">
+          ${isViewOnly() ? '' : `<button onclick="event.stopPropagation();editResult(${r.id})">✏️ Chỉnh sửa</button>`}
+          <button onclick="event.stopPropagation();exportDetailPDF(${r.id});closeAllResultMenus();">📄 Xuất file PDF</button>
+          ${isViewOnly() ? '' : `<button class="danger" onclick="event.stopPropagation();closeAllResultMenus();deleteResult(${r.id})">🗑 Xóa</button>`}
+        </div>
+        <div class="result-card-store">🏪 ${r.storeName}</div>
+        <div class="result-card-meta">${r.inspector ? '👤 ' + r.inspector + ' &nbsp;|&nbsp; ' : ''}📅 ${dateStr}</div>
+      </div>
+      <div class="result-card-score">
+        <div class="result-card-pts" style="color:${barColor}">${r.earnedPoints}/${r.totalPoints} <span style="font-size:0.75rem;color:#888;">(${r.pct}%)</span></div>
+        <div class="result-card-badge ${badgeClass}">${badgeText}</div>
+      </div>
+      <div class="result-card-bar"><div class="result-card-bar-fill" style="width:${r.pct}%;background:${barColor};"></div></div>
+    </div>`;
+  }).join('');
+}
+
+let currentDetailZoneId = null;
+
+function renderCriterionRow(c, cs) {
+  const res = cs?.result;
+  let badgeCls, badgeLabel;
+  if (res === 'pass')      { badgeCls='pass'; badgeLabel='✓ Đạt'; }
+  else if (res === 'fail') { badgeCls='fail'; badgeLabel='✗ Không đạt'; }
+  else if (res === 'na')   { badgeCls='na';   badgeLabel='N/A'; }
+  else                     { badgeCls='none'; badgeLabel='Chưa chấm'; }
+
+  const photos = cs?.photos || [];
+  const photosHTML = photos.length > 0 ? `
+    <div class="detail-criterion-photos">
+      ${photos.map(p => {
+        const src = p.driveUrl || p.data || '';
+        if (!src) return '';
+        return `<img src="${src}" alt="${p.name}" onclick="openLightbox('${src.replace(/'/g,"\\'")}')">`;
+      }).join('')}
+    </div>` : '';
+
+  return `
+  <div class="detail-criterion-row r-${res || 'none'}">
+    <span class="detail-criterion-badge ${badgeCls}">${badgeLabel}</span>
+    <div class="detail-criterion-text">
+      <div class="cname">${c.mandatory ? '<span style="font-size:0.68rem;background:#fce8e8;color:#c0392b;padding:1px 5px;border-radius:6px;margin-right:4px;">⚠</span>' : ''}${c.text}</div>
+      ${cs?.note ? `<div class="cnote">📝 ${cs.note}</div>` : ''}
+      ${photosHTML}
+    </div>
+  </div>`;
+}
+
+function sectionScore(section, r) {
+  let sTotal = 0, sEarned = 0, sFails = 0;
+  section.criteria.forEach(c => {
+    const res = r.state[c.id]?.result;
+    if (res === 'na') return;
+    sTotal++;
+    if (res === 'pass') sEarned++;
+    if (res === 'fail' && c.mandatory) sFails++;
+  });
+  return { sTotal, sEarned, sFails };
+}
+
+function zoneScore(zone, r) {
+  const zoneSections = SECTIONS.filter(s => zone.sectionIds.includes(s.id));
+  let total = 0, earned = 0, fails = 0;
+  zoneSections.forEach(section => {
+    const { sTotal, sEarned, sFails } = sectionScore(section, r);
+    total += sTotal; earned += sEarned; fails += sFails;
+  });
+  return { total, earned, fails, zoneSections };
+}
+
+function renderDetailZoneGrid(r) {
+  const cards = ZONES.map(zone => {
+    const { total, earned, fails } = zoneScore(zone, r);
+    const badge = total === 0 ? '—' : `${earned}/${total}`;
+    const color = total===0?'#aaa':earned===total?'#2e7d32':earned===0?'#c62828':'#e65100';
+    return `
+    <div class="detail-zone-card" onclick="openDetailZone('${zone.id}')">
+      ${fails > 0 ? `<span class="dz-fail-badge">${fails} lỗi</span>` : ''}
+      <div class="dz-icon">${zone.icon}</div>
+      <div class="dz-title">${zone.title}</div>
+      <div class="dz-score" style="color:${color};">${badge}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="detail-zone-grid">${cards}</div>`;
+}
+
+function renderDetailZoneSections(r, zoneId) {
+  const zone = ZONES.find(z => z.id === zoneId);
+  if (!zone) return '';
+  const zoneSections = SECTIONS.filter(s => zone.sectionIds.includes(s.id));
+
+  let sectionsHTML = '';
+  for (const section of zoneSections) {
+    const criteria = section.criteria.map(c => renderCriterionRow(c, r.state[c.id])).join('');
+    const { sTotal, sEarned } = sectionScore(section, r);
+    const sBadge = sTotal === 0 ? '—' : `${sEarned}/${sTotal}`;
+    const sColor = sTotal===0?'#aaa':sEarned===sTotal?'#2e7d32':sEarned===0?'#c62828':'#e65100';
+
+    sectionsHTML += `
+    <div class="detail-section-row">
+      <div class="detail-section-title">
+        <span>${section.icon} ${section.title}</span>
+        <span style="font-size:0.8rem;font-weight:700;color:${sColor};margin-left:auto;">${sBadge}</span>
+      </div>
+      <div class="detail-criteria-list">${criteria}</div>
+    </div>`;
+  }
+
+  return `
+  <button class="detail-zone-back-btn" onclick="closeDetailZone()">← Tất cả khu vực</button>
+  <div class="detail-zone-section-title">${zone.icon} ${zone.title}</div>
+  ${sectionsHTML}`;
+}
+
+function openDetailZone(zoneId) {
+  currentDetailZoneId = zoneId;
+  const r = savedResults.find(x => String(x.id) === String(selectedResultId));
+  if (!r) return;
+  document.getElementById('detailSections').innerHTML = renderDetailZoneSections(r, zoneId);
+  scrollToTopAll();
+}
+
+function closeDetailZone() {
+  currentDetailZoneId = null;
+  const r = savedResults.find(x => String(x.id) === String(selectedResultId));
+  if (!r) return;
+  document.getElementById('detailSections').innerHTML = renderDetailZoneGrid(r);
+  scrollToTopAll();
+}
+
+function showDetail(id) {
+  selectedResultId = id;
+  currentDetailZoneId = null;
+  const r = savedResults.find(x => String(x.id) === String(id));
+  if (!r) return;
+
+  renderResultsTab();
+
+  const panel = document.getElementById('detailPanel');
+  panel.style.display = 'block';
+
+  let statusText, statusBg;
+  if (r.mandatoryFails > 0)   { statusText='❌ KHÔNG ĐẠT'; statusBg='#fce8e8'; }
+  else if (r.pct >= 90)       { statusText='✅ ĐẠT XUẤT SẮC'; statusBg='#e8f5e9'; }
+  else if (r.pct >= 75)       { statusText='✅ ĐẠT'; statusBg='#e8f5e9'; }
+  else                        { statusText='⚠ CẦN CẢI THIỆN'; statusBg='#fff8e1'; }
+
+  const dateStr = r.inspDate ? new Date(r.inspDate).toLocaleDateString('vi-VN') : '—';
+  const savedStr = new Date(r.savedAt).toLocaleString('vi-VN');
+
+  const sectionsHTML = renderDetailZoneGrid(r);
+
+  panel.innerHTML = `
+  <div class="detail-header">
+    <div class="detail-header-info">
+      <h2>🏪 ${r.storeName}</h2>
+      <p>👤 ${r.inspector || '—'} &nbsp;|&nbsp; 📅 ${dateStr} &nbsp;|&nbsp; Lưu lúc ${savedStr}</p>
+      <div style="margin-top:8px;display:inline-block;background:${statusBg};padding:4px 14px;border-radius:20px;font-size:0.88rem;font-weight:800;color:${r.mandatoryFails>0?'#c0392b':r.pct>=75?'#2e7d32':'#e65100'};">${statusText}</div>
+    </div>
+    <div class="detail-score-block">
+      <div class="detail-score-num">${r.earnedPoints}</div>
+      <div class="detail-score-sub">/ ${r.totalPoints} điểm</div>
+      <div style="font-size:1.1rem;font-weight:700;margin-top:4px;">${r.pct}%</div>
+    </div>
+  </div>
+  <div class="detail-summary">
+    <div class="detail-summary-item">
+      <div class="label">Điểm đạt</div>
+      <div class="val" style="color:#2e7d32;">${r.earnedPoints} / ${r.totalPoints}</div>
+    </div>
+    <div class="detail-summary-item">
+      <div class="label">Lỗi bắt buộc</div>
+      <div class="val" style="color:${r.mandatoryFails>0?'#c62828':'#2e7d32'};">${r.mandatoryFails} lỗi</div>
+    </div>
+    <div class="detail-summary-item">
+      <div class="label">Tỷ lệ đạt</div>
+      <div class="val">${r.pct}%</div>
+    </div>
+  </div>
+  <div class="detail-sections" id="detailSections">${sectionsHTML}</div>
+  <div style="padding:12px 20px;border-top:1px solid #f0f0f0;display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-secondary btn-sm" onclick="exportDetailPDF(${r.id})" id="btnDetailPDF_${r.id}">📄 Xuất PDF</button>
+    ${isViewOnly() ? '' : `<button class="btn btn-danger btn-sm" onclick="deleteResult(${r.id})">🗑 Xóa kết quả này</button>`}
+  </div>`;
+
+  scrollToTopAll();
+}
+
+// ========== RESULT CARD MENU (⋮) ==========
+function closeAllResultMenus() {
+  document.querySelectorAll('.result-card-menu.open').forEach(m => m.classList.remove('open'));
+}
+
+function toggleResultMenu(event, id) {
+  const menu = document.getElementById('resultMenu_' + id);
+  const wasOpen = menu.classList.contains('open');
+  closeAllResultMenus();
+  if (!wasOpen) menu.classList.add('open');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.result-card-menu') && !e.target.closest('.result-card-menu-btn')) {
+    closeAllResultMenus();
+  }
+});
+
+// Tải lại một kết quả đã lưu vào tab Chấm Điểm để chỉnh sửa
+function editResult(id) {
+  closeAllResultMenus();
+  const r = savedResults.find(x => String(x.id) === String(id));
+  if (!r) return;
+
+  showConfirm('Tải kết quả này vào tab Chấm Điểm để chỉnh sửa? Dữ liệu đang chấm dở (nếu có) sẽ bị thay thế.', () => {
+    // Khôi phục state
+    Object.keys(state).forEach(k => delete state[k]);
+    initState();
+    Object.keys(r.state || {}).forEach(k => {
+      state[k] = {
+        result: r.state[k].result || null,
+        note: r.state[k].note || '',
+        photos: (r.state[k].photos || []).map(p => ({ name: p.name, driveUrl: p.driveUrl }))
+      };
+    });
+
+    // Khôi phục thông tin cửa hàng / người chấm / ngày
+    document.getElementById('storeName').value = r.storeName || '';
+    document.getElementById('inspector').value = r.inspector || '';
+    document.getElementById('inspectDate').value = r.inspDate || new Date().toISOString().slice(0,10);
+
+    // Đánh dấu đang chỉnh sửa kết quả này (lưu sẽ cập nhật thay vì tạo mới)
+    window.editingResultId = r.id;
+
+    switchTab('scoring');
+    showZonePicker();
+    updateBadge();
+  }, 'Chấp nhận');
+}
+
+function deleteResult(id) {
+  showConfirm('Xóa kết quả này khỏi danh sách?', () => {
+    savedResults = savedResults.filter(r => String(r.id) !== String(id));
+    persistResults();
+    selectedResultId = null;
+    document.getElementById('detailPanel').style.display = 'none';
+    updateBadge();
+    renderResultsTab();
+    deleteFromSheet(id);
+  });
+}
+
+function clearAllResults() {
+  showConfirm('Xóa tất cả kết quả đã lưu?', () => {
+    savedResults = [];
+    persistResults();
+    selectedResultId = null;
+    updateBadge();
+    renderResultsTab();
+  });
+}
+
+// ========== CONFIRM DIALOG ==========
+function showConfirm(msg, onOk, okLabel) {
+  document.getElementById('confirmMsg').textContent = msg;
+  const overlay = document.getElementById('confirmOverlay');
+  overlay.classList.add('open');
+  const btn = document.getElementById('confirmOkBtn');
+  btn.textContent = okLabel || 'Xóa';
+  btn.classList.toggle('btn-danger', !okLabel);
+  btn.classList.toggle('btn-primary', !!okLabel);
+  btn.onclick = () => { overlay.classList.remove('open'); onOk(); };
+}
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
+// ========== CRITERION POPUP ==========
+// Build lookup map: criterionId -> {text, desc}
+const CRIT_MAP = {};
+SECTIONS.forEach(s => s.criteria.forEach(c => { CRIT_MAP[c.id] = { title: c.text, desc: c.desc }; }));
+
+function openCritPopup(criterionId) {
+  const c = CRIT_MAP[criterionId];
+  if (!c) return;
+  document.getElementById('critPopupTitle').textContent = c.title;
+  document.getElementById('critPopupBody').textContent = (c.desc === 'N/A' || !c.desc) ? 'Không có tiêu chuẩn cụ thể.' : c.desc;
+  document.getElementById('critPopupOverlay').classList.add('open');
+}
+function closeCritPopup(e) {
+  if (e && e.target !== document.getElementById('critPopupOverlay')) return;
+  document.getElementById('critPopupOverlay').classList.remove('open');
+}
+
+// ========== LIGHTBOX ==========
+function openLightbox(src) {
+  const img = document.getElementById('lightboxImg');
+  img.src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// ========== EXPORT PDF ==========
+async function loadLibs() {
+  async function loadScript(src) {
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+}
+
+function buildPrintHTML(r) {
+  let statusText, statusBg, statusFg, barColor;
+  if (r.mandatoryFails > 0)   { statusText='❌ KHÔNG ĐẠT'; statusBg='#fce8e8'; statusFg='#c0392b'; barColor='#e53935'; }
+  else if (r.pct >= 90)       { statusText='✅ ĐẠT XUẤT SẮC'; statusBg='#e8f5e9'; statusFg='#2e7d32'; barColor='#43a047'; }
+  else if (r.pct >= 75)       { statusText='✅ ĐẠT'; statusBg='#e8f5e9'; statusFg='#2e7d32'; barColor='#43a047'; }
+  else                        { statusText='⚠ CẦN CẢI THIỆN'; statusBg='#fff8e1'; statusFg='#e65100'; barColor='#ffa726'; }
+
+  const dateStr = r.inspDate ? new Date(r.inspDate).toLocaleDateString('vi-VN') : '—';
+
+  let html = `
+  <div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:22px 28px 18px;">
+    <div style="font-size:20px;font-weight:800;margin-bottom:5px;">📋 BẢNG CHẤM ĐIỂM QC CỬA HÀNG TRÀ SỮA</div>
+    <div style="font-size:11px;opacity:0.85;">Tiêu chuẩn sắp xếp & vận hành — Phiên bản v1.0 (07/05/2026)</div>
+  </div>
+  <div style="display:flex;border-bottom:2px solid #e0e4f0;">
+    <div style="flex:1;padding:14px 18px;border-right:1px solid #e0e4f0;">
+      <div style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px;">Cửa hàng</div>
+      <div style="font-size:14px;font-weight:700;">${r.storeName}</div>
+    </div>
+    <div style="flex:1;padding:14px 18px;border-right:1px solid #e0e4f0;">
+      <div style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px;">Người kiểm tra</div>
+      <div style="font-size:14px;font-weight:700;">${r.inspector || '—'}</div>
+    </div>
+    <div style="flex:1;padding:14px 18px;">
+      <div style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px;">Ngày kiểm tra</div>
+      <div style="font-size:14px;font-weight:700;">${dateStr}</div>
+    </div>
+  </div>
+  <div style="background:${statusBg};padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e0e4f0;">
+    <div>
+      <div style="font-size:16px;font-weight:800;color:${statusFg};">${statusText}</div>
+      <div style="font-size:11px;color:#555;margin-top:3px;">Điểm: <b>${r.earnedPoints}/${r.totalPoints}</b> (${r.pct}%) &nbsp;|&nbsp; Lỗi bắt buộc: <b style="color:#c0392b;">${r.mandatoryFails}</b></div>
+    </div>
+    <div style="width:120px;height:10px;background:#ddd;border-radius:10px;overflow:hidden;">
+      <div style="width:${r.pct}%;height:100%;background:${barColor};border-radius:10px;"></div>
+    </div>
+  </div>`;
+
+  for (const section of SECTIONS) {
+    let sTotal = 0, sEarned = 0;
+    section.criteria.forEach(c => {
+      const res = r.state[c.id]?.result;
+      if (res === 'na') return;
+      sTotal++; if (res === 'pass') sEarned++;
+    });
+    const sColor = sTotal===0?'#888':sEarned===sTotal?'#2e7d32':sEarned===0?'#c62828':'#e65100';
+    const accentColor = section.mandatory ? '#e53935' : 'var(--primary)';
+
+    html += `
+    <div style="border-left:5px solid ${accentColor};background:var(--primary-soft);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:10px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:800;">${section.icon} ${section.title}</div>
+      <div style="font-size:13px;font-weight:700;color:${sColor};">${sTotal===0?'—':`${sEarned}/${sTotal}`}</div>
+    </div>`;
+
+    for (const c of section.criteria) {
+      const cs = r.state[c.id];
+      const res = cs?.result;
+      let rowBg, badgeText, badgeBg, badgeFg;
+      if (res === 'pass')      { rowBg='#f9fff9'; badgeText='✓ ĐẠT';       badgeBg='#e8f5e9'; badgeFg='#2e7d32'; }
+      else if (res === 'fail') { rowBg='#fff9f9'; badgeText='✗ KHÔNG ĐẠT'; badgeBg='#fce8e8'; badgeFg='#c62828'; }
+      else if (res === 'na')   { rowBg='#f5faff'; badgeText='— N/A';        badgeBg='#e3f2fd'; badgeFg='#1565c0'; }
+      else                     { rowBg='#fff';    badgeText='CHƯA CHẤM';    badgeBg='#f0f0f0'; badgeFg='#888';    }
+
+      const photos = cs?.photos || [];
+      html += `
+      <div style="background:${rowBg};border:1px solid #e0e4f0;border-radius:6px;padding:11px 14px;margin:4px 0;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+          <div style="flex:1;">
+            ${c.mandatory ? '<span style="font-size:9px;font-weight:700;background:#fce8e8;color:#c0392b;padding:1px 6px;border-radius:8px;margin-right:6px;">⚠ BẮT BUỘC</span>' : ''}
+            <span style="font-size:13px;font-weight:700;">${c.text}</span>
+          </div>
+          <div style="flex-shrink:0;background:${badgeBg};color:${badgeFg};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap;">${badgeText}</div>
+        </div>
+        ${cs?.note ? `<div style="margin-top:7px;font-size:11px;color:#555;background:#f8f9fc;padding:6px 10px;border-radius:6px;border-left:3px solid #aab;"><b>Ghi chú:</b> ${cs.note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        ${photos.length > 0 ? `
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:5px;">📷 Ảnh đính kèm (${photos.length}):</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${photos.map(p => { const src = p.driveUrl || p.data || ''; return src ? `<img src="${src}" style="width:160px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">` : ''; }).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+    }
+  }
+
+  html += `<div style="margin-top:16px;padding:10px 14px;border-top:1px solid #e0e4f0;font-size:10px;color:#aaa;text-align:center;">
+    Báo cáo QC Cửa Hàng Trà Sữa &nbsp;|&nbsp; ${r.storeName} &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Lưu lúc ${new Date(r.savedAt).toLocaleString('vi-VN')}
+  </div>`;
+
+  return html;
+}
+
+async function exportDetailPDF(id) {
+  const r = savedResults.find(x => String(x.id) === String(id));
+  if (!r) return;
+  const btn = document.getElementById('btnDetailPDF_' + id);
+  if (btn) { btn.textContent = '⏳ Đang tạo...'; btn.disabled = true; }
+
+  await loadLibs();
+  const { jsPDF } = window.jspdf;
+
+  const printDiv = document.createElement('div');
+  printDiv.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;font-family:Segoe UI,Arial,sans-serif;font-size:13px;color:#1a1a2e;';
+  printDiv.innerHTML = buildPrintHTML(r);
+  document.body.appendChild(printDiv);
+
+  try {
+    const canvas = await html2canvas(printDiv, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794, logging: false });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const pdfW = 210, pdfH = 297;
+    const imgH = (canvas.height * pdfW) / canvas.width;
+    const doc2 = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    let posY = 0, remainH = imgH, page = 0;
+    while (remainH > 0) {
+      if (page > 0) doc2.addPage();
+      doc2.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
+      doc2.setFillColor(255,255,255);
+      doc2.rect(0, Math.min(pdfH, remainH), pdfW, pdfH, 'F');
+      posY += pdfH; remainH -= pdfH; page++;
+    }
+    const fname = `QC_${r.storeName.replace(/\s+/g,'-')}_${r.inspDate||'nodate'}.pdf`;
+    doc2.save(fname);
+  } finally {
+    document.body.removeChild(printDiv);
+    if (btn) { btn.textContent = '📄 Xuất PDF'; btn.disabled = false; }
+  }
+}
+
+async function exportAllPDF() {
+  if (savedResults.length === 0) { alert('Chưa có kết quả nào để xuất.'); return; }
+  if (selectedResultId) { exportDetailPDF(selectedResultId); return; }
+  exportDetailPDF(savedResults[0].id);
+}
+
+// ========== RESET ==========
+function resetAll() {
+  showConfirm('Xóa tất cả dữ liệu và làm lại từ đầu?', () => {
+    SECTIONS.forEach(s => s.criteria.forEach(c => { state[c.id] = { result: null, note: '', photos: [] }; }));
+    document.getElementById('storeName').value = '';
+    document.getElementById('inspector').value = '';
+    document.getElementById('inspectDate').value = new Date().toISOString().slice(0,10);
+    render();
+  });
+}
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', () => {
+  // Khởi tạo app chỉ sau khi đăng nhập & xác thực quyền thành công (xem startApp())
+  initAuth();
+});
+
+// ========== AUTO RESIZE (Google Sites iframe) ==========
+function setupAutoResize() {
+  const reportHeight = () => {
+    const h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+    try {
+      window.parent.postMessage({ type: 'resize', height: h }, '*');
+      // Một số khung nhúng dùng định dạng pym.js
+      window.parent.postMessage('pym:height:' + h, '*');
+    } catch(e) { /* ignore */ }
+  };
+
+  // Báo ngay khi tải xong + theo dõi mọi thay đổi kích thước nội dung
+  reportHeight();
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => reportHeight()).observe(document.body);
+  } else {
+    setInterval(reportHeight, 500);
+  }
+  window.addEventListener('load', reportHeight);
+
+  window._reportHeight = reportHeight;
+}
+
+// Cuộn cả trang hiện tại lẫn khung nhúng (Google Sites iframe) về đầu trang
+function scrollToTopAll() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  try {
+    window.parent.postMessage({ type: 'scrollToTop' }, '*');
+    window.parent.postMessage('pym:scrollToChildPos:0', '*');
+  } catch(e) { /* ignore */ }
+  if (window._reportHeight) {
+    requestAnimationFrame(() => requestAnimationFrame(window._reportHeight));
+  }
+}
+
+// ========== DEBUG PANEL ==========
+function debugLog(msg) {
+  const panel = document.getElementById('debugPanel');
+  if (!panel) return;
+  const line = document.createElement('div');
+  line.textContent = new Date().toLocaleTimeString('vi-VN') + ' — ' + msg;
+  panel.insertBefore(line, panel.firstChild);
+  if (panel.children.length > 30) panel.removeChild(panel.lastChild);
+}
+
+function showDebugPanel() {
+  const overlay = document.getElementById('debugOverlay');
+  overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+  if (overlay.style.display === 'flex') refreshDebugInfo();
+}
+
+function refreshDebugInfo() {
+  // Kiểm tra localStorage
+  const raw = localStorage.getItem('qc_saved_results_v4');
+  let lsInfo = 'localStorage (qc_saved_results_v4):\n';
+  if (!raw) {
+    lsInfo += '  (trống)\n';
+  } else {
+    try {
+      const data = JSON.parse(raw);
+      data.forEach((r, ri) => {
+        lsInfo += `  [${ri}] id=${r.id} store="${r.storeName}"\n`;
+        Object.keys(r.state || {}).forEach(k => {
+          const photos = r.state[k].photos || [];
+          if (photos.length) {
+            photos.forEach((p, pi) => {
+              lsInfo += `    ${k}[${pi}]: name="${p.name}" driveUrl="${p.driveUrl || 'NULL'}"\n`;
+            });
+          }
+        });
+      });
+    } catch(e) { lsInfo += '  Lỗi parse: ' + e.message; }
+  }
+
+  // Kiểm tra state hiện tại
+  let stateInfo = '\nState hiện tại (ảnh đang nhập):\n';
+  SECTIONS.forEach(s => s.criteria.forEach(c => {
+    const photos = state[c.id]?.photos || [];
+    if (photos.length) {
+      photos.forEach((p, pi) => {
+        stateInfo += `  ${c.id}[${pi}]: name="${p.name}" data=${p.data ? p.data.substring(0,30)+'...' : 'null'} driveUrl="${p.driveUrl || 'null'}" uploading=${p.uploading}\n`;
+      });
+    }
+  }));
+
+  document.getElementById('debugInfo').textContent = lsInfo + stateInfo;
+}
+</script>
+
+<!-- DEBUG OVERLAY -->
+<div id="debugOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:#1a1a2e;color:#0f0;font-family:monospace;font-size:11px;padding:20px;border-radius:8px;width:90%;max-width:700px;max-height:80vh;overflow:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <b style="color:#fff;font-size:14px;">🔍 DEBUG — Trạng thái ảnh</b>
+      <button onclick="refreshDebugInfo()" style="background:#333;color:#0f0;border:1px solid #0f0;padding:4px 10px;border-radius:4px;cursor:pointer;margin-right:8px;">🔄 Làm mới</button>
+      <button onclick="document.getElementById('debugOverlay').style.display='none'" style="background:#c00;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;">✕ Đóng</button>
+    </div>
+    <pre id="debugInfo" style="white-space:pre-wrap;word-break:break-all;color:#0f0;margin:0 0 12px 0;"></pre>
+    <div style="color:#aaa;font-size:10px;margin-bottom:4px;">Log sự kiện:</div>
+    <div id="debugPanel" style="color:#ff0;font-size:10px;max-height:150px;overflow:auto;"></div>
+  </div>
+</div>
+
+<!-- Nút debug (góc dưới phải) -->
+<button onclick="showDebugPanel()" style="position:fixed;bottom:16px;right:16px;z-index:9998;background:#1a1a2e;color:#0f0;border:1px solid #0f0;border-radius:50%;width:40px;height:40px;font-size:16px;cursor:pointer;opacity:0.7;" title="Debug ảnh">🔍</button>
+
+</body>
+</html>
