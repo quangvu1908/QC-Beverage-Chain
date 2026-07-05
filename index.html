@@ -6,7 +6,7 @@
 <title>Hệ Thống Kiểm Soát Chất Lượng Vận Hành - Chuỗi Mongo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -18,21 +18,46 @@
     --primary-dark: #d9692a;
     --primary-soft: #fdf1e3;
     --bg: #fbf3e8;
+    /* Orange-tinted shadows (redesign-skill: tint shadows to match background hue) */
+    --shadow-sm: 0 2px 8px rgba(180,90,30,0.09);
+    --shadow-md: 0 4px 16px rgba(180,90,30,0.12);
+    --shadow-lg: 0 8px 32px rgba(180,90,30,0.16);
+    --shadow-primary: 0 4px 14px rgba(238,123,60,0.35);
+    /* Easing */
+    --ease: cubic-bezier(0.2,0,0,1);
+    /* UI font */
+    --font-ui: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-serif: 'Lora', Georgia, serif;
   }
 
+  html { scroll-behavior: smooth; }
+
   body {
-    font-family: 'Lora', 'Segoe UI', system-ui, serif;
+    font-family: var(--font-ui);
     background: var(--bg);
     color: #1a1a2e;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
+
+  /* Lora for editorial text: headings and sidebar brand */
+  h1, h2, h3, .sidebar-title, .auth-card h1, .page-header h1 {
+    font-family: var(--font-serif);
+  }
+
+  /* Tabular figures for all numeric data */
+  .score-num, .result-card-pts, .dash-kpi-value, .detail-score-num,
+  .score-pct, .section-score-pill { font-variant-numeric: tabular-nums; }
+
+  /* text-wrap balance for headings */
+  h1, h2, h3, .section-title, .auth-card h1 { text-wrap: balance; }
 
   /* ===== APP LAYOUT ===== */
   .app-layout { display: flex; min-height: 100vh; }
 
   /* ===== SIDEBAR ===== */
   .sidebar {
-    width: 250px; background: white; border-right: 1px solid #f4e6d7; flex-shrink: 0;
+    width: 250px; background: #fffcf8; border-right: 1px solid #f4e6d7; flex-shrink: 0;
     display: flex; flex-direction: column; padding: 22px 0;
     position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 1000;
   }
@@ -53,7 +78,7 @@
     font-family: inherit;
   }
   .sidebar-link:hover { background: var(--primary-soft); color: #1a1a2e; }
-  .sidebar-link.active { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; box-shadow: 0 4px 12px rgba(238,123,60,0.3); }
+  .sidebar-link.active { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; box-shadow: var(--shadow-primary); }
   .sidebar-link-icon { font-size: 1.05rem; }
   .sidebar-link .badge { margin-left: auto; }
   .sidebar-link.active .badge { background: white; color: var(--primary); }
@@ -67,7 +92,7 @@
   .page-header {
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
     color: white; padding: 22px 32px;
-    box-shadow: 0 4px 12px rgba(238,123,60,0.25);
+    box-shadow: var(--shadow-primary);
   }
   .page-header h1 { font-size: 1.3rem; font-weight: 700; }
   .page-header p { font-size: 0.82rem; opacity: 0.85; margin-top: 4px; }
@@ -95,7 +120,7 @@
   }
   .auth-card {
     background: white; border-radius: 18px; padding: 36px 32px; max-width: 380px; width: 100%;
-    text-align: center; box-shadow: 0 8px 30px rgba(238,123,60,0.15);
+    text-align: center; box-shadow: var(--shadow-lg);
   }
   .auth-logo {
     width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 18px;
@@ -135,7 +160,7 @@
   .sidebar-user-logout:hover { color: var(--primary); }
 
   /* ===== USER MANAGEMENT ===== */
-  .users-table-wrap { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 24px; }
+  .users-table-wrap { background: white; border-radius: 12px; box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 24px; }
   .users-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .users-table th { background: var(--primary-soft); text-align: left; padding: 10px 14px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #b9783f; font-weight: 800; }
   .users-table td { padding: 10px 14px; border-bottom: 1px solid #f4ece2; vertical-align: top; }
@@ -180,17 +205,21 @@
   /* ===== STORE INFO ===== */
   .store-info {
     background: white; border-radius: 12px; padding: 20px 24px;
-    margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    margin-bottom: 24px; box-shadow: var(--shadow-sm);
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
   }
   @media (max-width: 600px) { .store-info { grid-template-columns: 1fr; } }
   .store-info label { font-size: 0.78rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
   .store-info input, .store-info select {
-    width: 100%; border: 1.5px solid #e0e4f0; border-radius: 8px;
-    padding: 8px 12px; font-size: 0.92rem; color: #1a1a2e; transition: border-color 0.2s;
-    background: white; box-sizing: border-box; height: 38px;
+    width: 100%; border: 1.5px solid #e8e0d8; border-radius: 8px;
+    padding: 8px 12px; font-size: 0.88rem; color: #1a1a2e;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: white; box-sizing: border-box; height: 38px; font-family: var(--font-ui);
   }
-  .store-info input:focus, .store-info select:focus { outline: none; border-color: var(--primary); }
+  .store-info input:focus, .store-info select:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(238,123,60,0.12);
+  }
 
   /* Sheet config */
   .sheet-config {
@@ -216,7 +245,7 @@
   /* ===== SCORE SUMMARY ===== */
   .score-summary {
     background: white; border-radius: 12px; padding: 20px 24px;
-    margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    margin-bottom: 24px; box-shadow: var(--shadow-sm);
     display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
   }
   .score-circle {
@@ -237,7 +266,7 @@
   .status-warn { background: #fff3cd; color: #856404; }
 
   /* ===== SECTION ===== */
-  .section { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+  .section { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: var(--shadow-sm); overflow: hidden; }
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 16px 20px; cursor: pointer; border-left: 4px solid var(--primary);
@@ -301,8 +330,8 @@
   .radio-group label.selected-fail { background: #ffebee; border-color: #e53935; }
   .radio-group label.selected-na { background: #e3f2fd; border-color: #1e88e5; }
   .criterion-notes { margin-top: 10px; }
-  .criterion-notes textarea { width: 100%; border: 1.5px solid #e0e4f0; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; resize: vertical; min-height: 52px; font-family: inherit; color: #333; transition: border-color 0.2s; }
-  .criterion-notes textarea:focus { outline: none; border-color: var(--primary); }
+  .criterion-notes textarea { width: 100%; border: 1.5px solid #e8e0d8; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; resize: vertical; min-height: 52px; font-family: var(--font-ui); color: #333; transition: border-color 0.15s, box-shadow 0.15s; }
+  .criterion-notes textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(238,123,60,0.12); }
   .photo-area { margin-top: 10px; }
   .photo-upload-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--primary); border: 1.5px dashed var(--primary); border-radius: 8px; padding: 6px 14px; cursor: pointer; transition: all 0.15s; background: var(--primary-soft); }
   .photo-upload-btn:hover { background: var(--primary-soft); }
@@ -314,16 +343,22 @@
 
   /* ===== ACTIONS ===== */
   .actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
-  .btn { padding: 10px 22px; border-radius: 8px; font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+  .btn {
+    padding: 10px 22px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; border: none;
+    cursor: pointer; transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s;
+    display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); letter-spacing: 0.01em;
+  }
+  .btn:active { transform: scale(0.97) translateY(0) !important; }
+  .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .btn-primary { background: linear-gradient(135deg,var(--primary),var(--primary-dark)); color: white; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(238,123,60,0.4); }
-  .btn-secondary { background: white; color: var(--primary); border: 2px solid var(--primary); }
-  .btn-secondary:hover { background: var(--primary-soft); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-primary); }
+  .btn-secondary { background: white; color: var(--primary); border: 1.5px solid #f0d4bb; }
+  .btn-secondary:hover { background: var(--primary-soft); border-color: var(--primary); }
   .btn-success { background: linear-gradient(135deg,#43a047,#2e7d32); color: white; }
-  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(67,160,71,0.4); }
-  .btn-danger { background: white; color: #e53935; border: 2px solid #e53935; }
-  .btn-danger:hover { background: #fff5f5; }
-  .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+  .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(67,160,71,0.35); }
+  .btn-danger { background: white; color: #e53935; border: 1.5px solid #f5c5c5; }
+  .btn-danger:hover { background: #fff5f5; border-color: #e53935; }
+  .btn-sm { padding: 6px 14px; font-size: 0.78rem; }
 
   /* ===== KẾT QUẢ TAB ===== */
   .results-empty { text-align: center; padding: 60px 20px; color: #aaa; }
@@ -333,11 +368,11 @@
   .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
   .result-card {
-    background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    background: white; border-radius: 14px; box-shadow: var(--shadow-sm);
     overflow: visible; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s;
     border: 2px solid transparent; position: relative;
   }
-  .result-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  .result-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
   .result-card.selected { border-color: var(--primary); }
   .result-card-top { padding: 16px 18px 12px; position: relative; }
   .result-card-menu-btn {
@@ -376,7 +411,7 @@
 
   /* ===== DETAIL PANEL ===== */
   .detail-panel {
-    background: white; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    background: white; border-radius: 14px; box-shadow: var(--shadow-sm);
     margin-top: 24px; overflow: hidden;
   }
   .detail-header {
@@ -461,7 +496,7 @@
     margin-bottom: 24px;
   }
   .zone-card {
-    background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    background: white; border-radius: 16px; box-shadow: var(--shadow-sm);
     padding: 22px 20px; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s;
     border: 2.5px solid transparent; position: relative; overflow: hidden;
   }
@@ -492,6 +527,39 @@
   .zone-back-btn:hover { background: var(--primary-soft); }
   .zone-breadcrumb-text { font-size: 0.9rem; font-weight: 700; color: #444; }
   .zone-breadcrumb-icon { font-size: 1.1rem; }
+
+  /* ===== TOAST NOTIFICATIONS ===== */
+  #toastContainer {
+    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+  }
+  .toast {
+    display: flex; align-items: flex-start; gap: 10px; min-width: 260px; max-width: 360px;
+    background: white; border-radius: 12px; padding: 14px 16px;
+    box-shadow: var(--shadow-lg); pointer-events: auto;
+    animation: toastIn 0.25s var(--ease) forwards;
+    border-left: 4px solid var(--primary);
+    font-family: var(--font-ui); font-size: 0.875rem; line-height: 1.45;
+  }
+  .toast.toast-success { border-left-color: #43a047; }
+  .toast.toast-error   { border-left-color: #e53935; }
+  .toast.toast-info    { border-left-color: #1976d2; }
+  .toast.toast-warn    { border-left-color: #f57c00; }
+  .toast-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .toast-body { flex: 1; color: #333; font-weight: 500; }
+  .toast-close {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    color: #bbb; padding: 0; line-height: 1; flex-shrink: 0; margin-top: 1px;
+    transition: color 0.15s;
+  }
+  .toast-close:hover { color: #555; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateY(8px); } }
+  .toast.removing { animation: toastOut 0.2s var(--ease) forwards; }
+  @media (max-width: 480px) {
+    #toastContainer { bottom: 16px; right: 16px; left: 16px; }
+    .toast { min-width: unset; max-width: unset; }
+  }
 
   /* ===== DASHBOARD ===== */
   .dash-view-toggle { display: flex; gap: 4px; background: #f0f0f0; border-radius: 8px; padding: 3px; }
@@ -567,6 +635,8 @@
 <body>
 
 <!-- ===== AUTH: Đang kiểm tra đăng nhập ===== -->
+<div id="toastContainer"></div>
+
 <div class="auth-screen" id="authLoading">
   <div class="auth-card">
     <div class="auth-spinner"></div>
@@ -1297,7 +1367,7 @@ async function sendToSheet(record) {
 async function syncFromSheet(silent = false) {
   const url = getWebhookUrl();
   if (!url) {
-    if (!silent) alert('Chưa cấu hình Google Sheet URL.');
+    if (!silent) showToast('Chưa cấu hình Google Sheet URL.', 'warn');
     return;
   }
   const btn = document.getElementById('btnSync');
@@ -1323,10 +1393,10 @@ async function syncFromSheet(silent = false) {
     updateBadge();
     renderResultsTab();
     setSheetStatus('connected', `✅ Đã tải ${remote.length} kết quả`);
-    if (!silent) alert(`✅ Đã tải ${remote.length} kết quả từ Google Sheet!`);
+    if (!silent) showToast(`Đã tải ${remote.length} kết quả từ Google Sheet.`, 'success');
   } catch(e) {
     setSheetStatus('error', '❌ Lỗi tải dữ liệu');
-    if (!silent) alert('❌ Không thể tải dữ liệu từ Sheet:\n' + e.message);
+    if (!silent) showToast('Không thể tải dữ liệu từ Sheet: ' + e.message, 'error');
     else setSheetStatus('error', '❌ ' + e.message);
   } finally {
     if (btn) { btn.textContent = '🔄 Đồng bộ từ Sheet'; btn.disabled = false; }
@@ -1446,7 +1516,7 @@ async function checkAuthWithToken(idToken) {
     showAuthScreen(null);
     startApp();
     if (u.bootstrap) {
-      setTimeout(() => alert('🎉 Bạn là người đăng nhập đầu tiên và đã được tự động cấp quyền Quản trị viên!\nVào "Quản Lý Tài Khoản" để cấp quyền cho các tài khoản khác.'), 400);
+      setTimeout(() => showToast('Bạn là người đăng nhập đầu tiên — đã được cấp quyền Quản trị viên. Vào "Quản Lý Tài Khoản" để phân quyền cho các tài khoản khác.', 'info', 7000), 400);
     }
   } catch (e) {
     localStorage.removeItem('qc_idtoken');
@@ -1527,7 +1597,7 @@ async function loadUsers() {
     if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
     usersList = res.users || [];
   } catch (e) {
-    alert('❌ Không thể tải danh sách tài khoản:\n' + e.message);
+    showToast('Không thể tải danh sách tài khoản: ' + e.message, 'error');
     usersList = [];
   }
 }
@@ -1604,12 +1674,12 @@ async function saveUserForm() {
   const email = document.getElementById('userFormEmail').value.trim().toLowerCase();
   const name = document.getElementById('userFormName').value.trim();
   const role = document.getElementById('userFormRole').value;
-  if (!email || !email.includes('@')) { alert('⚠ Vui lòng nhập email Gmail hợp lệ.'); return; }
+  if (!email || !email.includes('@')) { showToast('Vui lòng nhập email Gmail hợp lệ.', 'warn'); return; }
 
   let stores = [];
   if (role === 'area' || role === 'store') {
     stores = Array.from(document.querySelectorAll('#userFormStores input:checked')).map(c => c.value);
-    if (stores.length === 0) { alert('⚠ Vui lòng chọn ít nhất 1 cửa hàng.'); return; }
+    if (stores.length === 0) { showToast('Vui lòng chọn ít nhất 1 cửa hàng.', 'warn'); return; }
   }
   if (email === currentUser.email && role !== 'admin') {
     if (!confirm('⚠ Bạn đang đổi vai trò của chính tài khoản mình sang vai trò không phải Quản trị viên.\nBạn có thể mất quyền truy cập trang Quản Lý Tài Khoản. Tiếp tục?')) return;
@@ -1620,20 +1690,43 @@ async function saveUserForm() {
     closeUserForm();
     renderUsersTab();
   } catch (e) {
-    alert('❌ Lỗi lưu tài khoản:\n' + e.message);
+    showToast('Lỗi lưu tài khoản: ' + e.message, 'error');
   }
 }
 
 async function deleteUserAccount(email) {
-  if (email === currentUser.email) { alert('⚠ Bạn không thể tự xóa quyền của chính mình.'); return; }
+  if (email === currentUser.email) { showToast('Bạn không thể tự xóa quyền của chính mình.', 'warn'); return; }
   if (!confirm(`Xóa quyền truy cập của "${email}"?`)) return;
   try {
     const res = await sheetPost({ action: 'deleteuser', email });
     if (res.status !== 'ok') throw new Error(res.message || 'Lỗi không xác định');
     renderUsersTab();
   } catch (e) {
-    alert('❌ Lỗi xóa tài khoản:\n' + e.message);
+    showToast('Lỗi xóa tài khoản: ' + e.message, 'error');
   }
+}
+
+// ========== TOAST NOTIFICATIONS ==========
+const TOAST_ICONS = { success: '✅', error: '❌', warn: '⚠️', info: 'ℹ️' };
+function showToast(message, type = 'success', duration = 4000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) { console.log('[Toast]', type, message); return; }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <span class="toast-icon">${TOAST_ICONS[type] || '📢'}</span>
+    <span class="toast-body">${message}</span>
+    <button class="toast-close" onclick="dismissToast(this.parentElement)">✕</button>`;
+  container.appendChild(toast);
+  const timer = setTimeout(() => dismissToast(toast), duration);
+  toast._timer = timer;
+}
+function dismissToast(el) {
+  if (!el || el._removing) return;
+  el._removing = true;
+  clearTimeout(el._timer);
+  el.classList.add('removing');
+  setTimeout(() => el.remove(), 220);
 }
 
 // ========== DASHBOARD ==========
@@ -2205,14 +2298,14 @@ async function saveResult() {
   const inspector = document.getElementById('inspector').value.trim();
   const inspDate  = document.getElementById('inspectDate').value;
 
-  if (!storeName) { alert('Vui lòng nhập tên cửa hàng trước khi lưu.'); document.getElementById('storeName').focus(); return; }
+  if (!storeName) { showToast('Vui lòng nhập tên cửa hàng trước khi lưu.', 'warn'); document.getElementById('storeName').focus(); return; }
 
   // Kiểm tra còn ảnh đang upload không
   const stillUploading = SECTIONS.some(s => s.criteria.some(c =>
     (state[c.id].photos || []).some(p => p.uploading)
   ));
   if (stillUploading) {
-    alert('⏳ Vẫn còn ảnh đang tải lên Drive, vui lòng đợi một chút rồi lưu lại.');
+    showToast('Vẫn còn ảnh đang tải lên Drive, vui lòng đợi rồi lưu lại.', 'warn');
     return;
   }
 
@@ -2264,17 +2357,17 @@ async function saveResult() {
       const res = await sendToSheet(record);
       if (res && res.status === 'ok') {
         setSheetStatus('connected', '✅ Đã lưu lên Sheet');
-        alert(`✅ Đã lưu kết quả "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n📊 Đã ghi vào Google Sheet!`);
+        showToast(`Đã lưu kết quả "${storeName}" — ${earnedPoints}/${totalPoints} (${pct}%) lên Google Sheet.`, 'success');
       } else {
         setSheetStatus('error', '⚠ Lưu Sheet thất bại');
-        alert(`✅ Đã lưu cục bộ "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n⚠ Không gửi được lên Sheet (đã lưu local).`);
+        showToast(`Đã lưu cục bộ "${storeName}" (${pct}%). Không gửi được lên Sheet.`, 'warn');
       }
     } catch(e) {
       setSheetStatus('error', '⚠ Lỗi kết nối Sheet');
-      alert(`✅ Đã lưu cục bộ "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n⚠ Không gửi được lên Sheet: ${e.message}`);
+      showToast(`Đã lưu cục bộ "${storeName}" (${pct}%). Lỗi Sheet: ${e.message}`, 'warn');
     }
   } else {
-    alert(`✅ Đã lưu kết quả "${storeName}"!\nĐiểm: ${earnedPoints}/${totalPoints} (${pct}%)\n💡 Tip: Cấu hình Google Sheet URL để đồng bộ với mọi người.`);
+    showToast(`Đã lưu kết quả "${storeName}" — ${earnedPoints}/${totalPoints} (${pct}%).`, 'success');
   }
 }
 
@@ -2780,7 +2873,7 @@ async function exportDetailPDF(id) {
 }
 
 async function exportAllPDF() {
-  if (savedResults.length === 0) { alert('Chưa có kết quả nào để xuất.'); return; }
+  if (savedResults.length === 0) { showToast('Chưa có kết quả nào để xuất.', 'warn'); return; }
   if (selectedResultId) { exportDetailPDF(selectedResultId); return; }
   exportDetailPDF(savedResults[0].id);
 }
